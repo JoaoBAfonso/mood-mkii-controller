@@ -175,7 +175,7 @@ export const instrumentPanels = {
       menu('deep-global', 'GLOBAL / MIDI', ['Performance', 'Performance Messages'], 51, 75, 6),
       menu('deep-matrix', 'MOD MATRIX', ['Mod Matrix 1', 'Mod Matrix 2', 'Mod Matrix 3', 'Mod Matrix 4', 'Mod Matrix 5', 'Mod Matrix 6', 'Mod Matrix 7', 'Mod Matrix 8'], 58, 82, 5),
       menu('deep-poly', 'EDIT', ['Voices'], 64, 82, 3.5), menu('deep-vcf', 'EDIT', ['Filter'], 71, 82, 5),
-      menu('deep-vca', 'EDIT', ['Amplifier'], 81, 82, 4), menu('deep-curves', 'CURVES', ['VCA Envelope', 'VCF Envelope', 'MOD Envelope'], 96, 96, 4),
+      menu('deep-vca', 'EDIT', ['Amplifier'], 81, 82, 4), menu('deep-curves', 'CURVES', ['VCA Envelope', 'VCF Envelope', 'MOD Envelope'], 96, 91, 4),
     ],
     notes: { first: 48, count: 49 },
   },

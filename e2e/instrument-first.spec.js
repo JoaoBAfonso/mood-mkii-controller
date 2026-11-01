@@ -45,6 +45,11 @@ for (const instrument of instruments) {
     await page.locator('#hardware-menu-close').click();
     await page.locator('#channel').selectOption(String(instrument.defaultChannel === 1 ? 2 : 1));
     await expect(input).toHaveValue(String(control.initial));
+    for (const entry of panel.menus) {
+      await page.locator(`[data-menu="${entry.id}"]`).click();
+      await expect(page.locator('#hardware-menu')).toBeVisible();
+      await page.locator('#hardware-menu-close').click();
+    }
     expect(errors).toEqual([]);
   });
 }

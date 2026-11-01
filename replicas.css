@@ -3,7 +3,7 @@
 .replica-page .instrument-scene{min-width:0}
 .hardware-viewport{overflow-x:auto;overscroll-behavior-x:contain;padding:12px 8px 22px;max-width:100%;scrollbar-color:#747d76 #e0e5e1}
 .replica-page #hardware{container-type:inline-size;width:var(--panel-width);min-width:var(--panel-min-width);max-width:100%;margin:0 auto;padding:0;border:2px solid #1119;border-radius:7px;background:var(--device-surface);color:var(--device-ink);box-shadow:0 6px 0 #20232255,0 12px 18px #0002}
-.replica-page #physical-controls{display:block;position:relative;width:100%;margin:0;overflow:visible}
+.replica-page #physical-controls{display:block;position:relative;width:100%;margin:0;overflow:visible;z-index:1}
 .panel-position{position:absolute!important;left:var(--x);top:var(--y);width:var(--w);height:var(--h,auto)}
 .replica-page .hardware-heading{display:none}
 .replica-page.layout-keyboard .hardware-heading{display:flex;border:0;padding:6px 15px;line-height:1}
