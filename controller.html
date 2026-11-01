@@ -1,39 +1,39 @@
 <!doctype html>
-<html lang="pt-PT">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#43234f">
-  <meta name="description" content="Controlador Web MIDI independente para pedais Chase Bliss. Controlos visuais, CC documentados e presets.">
+  <meta name="description" content="Independent Web MIDI controllers for Chase Bliss pedals. Visual controls, documented MIDI and performance presets.">
   <title>Pedal · MIDI Studio</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/fonts/outfit-variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=3.0.0">
-  <script type="module" src="app.js?v=3.0.0"></script>
+  <link rel="stylesheet" href="styles.css?v=3.1.0">
+  <script type="module" src="app.js?v=3.1.0"></script>
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" id="back-pedals" href="./?section=pedals"><span class="brand-icon">←</span> Pedais <span> / MIDI STUDIO</span></a>
-    <nav class="manual-links" aria-label="Manuais"><a class="manual-link" id="main-manual-link" target="_blank" rel="noreferrer">Manual ↗</a><a class="manual-link" id="manual-link" target="_blank" rel="noreferrer">Manual MIDI ↗</a></nav>
+    <a class="brand" id="back-pedals" href="./?section=pedals"><span class="brand-icon">←</span> Pedals <span> / MIDI STUDIO</span></a>
+    <nav class="manual-links" aria-label="Manuals"><a class="manual-link" id="main-manual-link" target="_blank" rel="noreferrer">Manual ↗</a><a class="manual-link" id="manual-link" target="_blank" rel="noreferrer">MIDI manual ↗</a></nav>
   </header>
   <main>
     <section class="intro">
-      <div><p class="eyebrow">UM GUIA INTERATIVO / MIDI STUDIO</p><h1 id="pedal-title"></h1><p class="subtitle" id="pedal-subtitle"></p></div>
+      <div><p class="eyebrow">AN INTERACTIVE GUIDE / MIDI STUDIO</p><h1 id="pedal-title"></h1><p class="subtitle" id="pedal-subtitle"></p></div>
       <div class="intro-art" aria-hidden="true"><span></span><span></span><i></i></div>
-      <span class="edition">CONTROLADOR INDEPENDENTE<br><strong id="pedal-edition"></strong></span>
+      <span class="edition">INDEPENDENT CONTROLLER<br><strong id="pedal-edition"></strong></span>
     </section>
-    <section class="connection card" aria-label="Ligação MIDI">
-      <div class="connection-heading"><span class="status-dot" id="status-dot"></span><div><strong id="connection-status">Não ligado</strong><small id="connection-detail">Escolhe a saída e o canal</small></div></div>
-      <button id="connect" class="primary">Ligar MIDI <span>↗</span></button>
-      <label class="compact">Saída MIDI<select id="output"><option value="">Selecionar saída</option></select></label>
-      <label class="compact channel">Canal<select id="channel"></select></label>
-      <label class="demo-switch"><input type="checkbox" id="demo"> Modo demo</label>
+    <section class="connection card" aria-label="MIDI connection">
+      <div class="connection-heading"><span class="status-dot" id="status-dot"></span><div><strong id="connection-status">Not connected</strong><small id="connection-detail">Choose an output and channel</small></div></div>
+      <button id="connect" class="primary">Connect MIDI <span>↗</span></button>
+      <label class="compact">MIDI output<select id="output"><option value="">Select output</option></select></label>
+      <label class="compact channel">Channel<select id="channel"></select></label>
+      <label class="demo-switch"><input type="checkbox" id="demo"> Demo mode</label>
     </section>
     <div id="notification" class="notification" role="alert" hidden></div>
-    <section class="preset-quick card" id="preset-quick" aria-label="Presets de performance"></section>
+    <section class="preset-quick card" id="preset-quick" aria-label="Performance presets"></section>
     <div class="workspace">
-      <section class="pedal-area" aria-label="Controlos físicos">
-        <div class="section-heading"><span>01 / O PEDAL</span><span class="tag" id="pedal-bank" aria-live="polite">NORMAL · banco principal</span></div>
+      <section class="pedal-area" aria-label="Physical controls">
+        <div class="section-heading"><span>01 / THE PEDAL</span><span class="tag" id="pedal-bank" aria-live="polite">NORMAL · main bank</span></div>
         <p id="bank-description" class="bank-description"></p>
         <div class="pedal-stage">
           <div class="pedal">
@@ -41,35 +41,35 @@
             <div id="pedal-knobs" class="knob-grid"></div>
             <div id="pedal-toggles" class="pedal-toggles"></div>
             <div class="pedal-art" aria-hidden="true"><span class="orbit orbit-one"></span><span class="orbit orbit-two"></span><strong id="pedal-logo"></strong><small id="pedal-category"></small></div>
-            <div class="preset-toggle"><label>PRESET<select id="physical-preset" aria-label="Preset físico"><option value="0">LIVE</option><option value="2">LEFT · 2</option><option value="1">RIGHT · 1</option></select></label></div>
+            <div class="preset-toggle"><label>PRESET<select id="physical-preset" aria-label="Physical preset"><option value="0">LIVE</option><option value="2">LEFT · 2</option><option value="1">RIGHT · 1</option></select></label></div>
             <div id="footswitches" class="footswitches"></div>
             <div class="pedal-bottom" id="pedal-bottom"></div>
           </div>
         </div>
-        <p class="pedal-tip">Arrasta os knobs. Passa o rato ou toca em ? para explorar.</p>
-        <div class="signal-card"><span>PERCURSO DO SOM</span><strong id="signal-flow"></strong></div>
+        <p class="pedal-tip">Drag the knobs. Hover for 3 seconds, focus a control or tap ? for help.</p>
+        <div class="signal-card"><span>SIGNAL FLOW</span><strong id="signal-flow"></strong></div>
         <div class="state-note" hidden><p><strong></strong></p></div>
       </section>
-      <section class="control-area card" aria-label="Comandos adicionais">
-        <div class="panel-heading"><div><p class="eyebrow">02 / EXPLORAR</p><h2 id="panel-title"></h2></div><span class="panel-icon" aria-hidden="true">✳</span></div>
-        <div class="tabs" role="tablist" aria-label="Grupos de controlos">
-          <button role="tab" id="tab-performance" aria-controls="panel-performance" aria-selected="true" data-tab="performance">Tocar</button>
+      <section class="control-area card" aria-label="Additional controls">
+        <div class="panel-heading"><div><p class="eyebrow">02 / EXPLORE</p><h2 id="panel-title"></h2></div><span class="panel-icon" aria-hidden="true">✳</span></div>
+        <div class="tabs" role="tablist" aria-label="Control groups">
+          <button role="tab" id="tab-performance" aria-controls="panel-performance" aria-selected="true" data-tab="performance">Play</button>
           <button role="tab" id="tab-hidden" aria-controls="panel-hidden" aria-selected="false" tabindex="-1" data-tab="hidden">Hidden</button>
           <button role="tab" id="tab-dips" aria-controls="panel-dips" aria-selected="false" tabindex="-1" data-tab="dips">DIP / Ramp</button>
           <button role="tab" id="tab-synth" aria-controls="panel-synth" aria-selected="false" tabindex="-1" data-tab="synth">Synth</button>
           <button role="tab" id="tab-presets" aria-controls="panel-presets" aria-selected="false" tabindex="-1" data-tab="presets">Presets</button>
-          <button role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1" data-tab="settings">Configurar</button>
+          <button role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1" data-tab="settings">Setup</button>
         </div>
         <div id="panels"></div>
-        <label class="technical-switch"><input type="checkbox" id="technical-values"> Valores MIDI</label>
+        <label class="technical-switch"><input type="checkbox" id="technical-values"> MIDI values</label>
       </section>
     </div>
     <section class="bottom-grid">
-      <details class="card guide"><summary>Ligação e valores <span>+</span></summary><ol><li>Usa Chrome ou Edge. Liga a interface USB–MIDI ao MIDI IN TRS de ¼″ através de conversão compatível, como MIDIBox.</li><li>Escolhe a saída e o canal do pedal (por defeito, <strong>2</strong>). Confirma que selecionaste o modelo ligado.</li><li>Para mudar o canal do pedal, mantém os dois footswitches premidos ao ligá-lo e envia um Program Change nesse canal.</li></ol><p>Os valores mostram os últimos gestos da interface. Depois de carregar um preset, ~ marca os valores anteriores; mexe num controlo para o definir novamente.</p></details>
-      <details class="card activity" aria-label="Monitor MIDI"><summary>Monitor MIDI</summary><div class="activity-heading"><button id="clear-log" class="text-button">Limpar</button></div><p id="monitor-empty">Os próximos gestos aparecem aqui.</p><ol id="log" aria-label="Mensagens MIDI recentes"></ol></details>
+      <details class="card guide"><summary>Connection and values <span>+</span></summary><ol><li>Use Chrome or Edge. Connect USB–MIDI to the ¼″ TRS MIDI IN using a compatible converter such as MIDIBox.</li><li>Choose the pedal’s output and channel (default: <strong>2</strong>). Select the connected model.</li><li>To change the pedal’s channel, hold both footswitches at power-up and send a Program Change on that channel.</li></ol><p>Values show the latest interface gestures. After loading a preset, ~ marks earlier values; move a control to set it again.</p></details>
+      <details class="card activity" aria-label="MIDI monitor"><summary>MIDI monitor</summary><div class="activity-heading"><button id="clear-log" class="text-button">Clear</button></div><p id="monitor-empty">Your next gestures appear here.</p><ol id="log" aria-label="Recent MIDI messages"></ol></details>
     </section>
   </main>
-  <footer><span>Feito para explorar. Sem contas, sem tracking, sem áudio na cloud.</span><span>Não afiliado à Chase Bliss · <a href="https://github.com/JoaoBAfonso/mood-mkii-controller" target="_blank" rel="noreferrer">Código no GitHub ↗</a></span></footer>
-  <dialog id="confirm-dialog"><form method="dialog"><p class="eyebrow">CONFIRMAR COMANDO</p><h2>Antes de continuar…</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Cancelar</button><button value="confirm" class="danger">Confirmar</button></div></form></dialog>
+  <footer><span>Made to explore. No accounts, tracking or cloud audio.</span><span>Not affiliated with Chase Bliss · <a href="https://github.com/JoaoBAfonso/mood-mkii-controller" target="_blank" rel="noreferrer">Code on GitHub ↗</a></span></footer>
+  <dialog id="confirm-dialog"><form method="dialog"><p class="eyebrow">CONFIRM COMMAND</p><h2>Before continuing…</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Cancel</button><button value="confirm" class="danger">Confirm</button></div></form></dialog>
 </body>
 </html>

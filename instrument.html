@@ -1,62 +1,67 @@
 <!doctype html>
-<html lang="pt-PT">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#20282a">
-  <meta name="description" content="Controlos MIDI, instrumentos visuais e biblioteca de performance.">
-  <title>Instrumento · MIDI Studio</title>
+  <meta name="description" content="Visual instrument panels, MIDI controls and performance libraries.">
+  <title>Instrument · MIDI Studio</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/fonts/outfit-variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=3.0.0">
-  <link rel="stylesheet" href="instruments.css?v=3.0.0">
-  <script type="module" src="instrument-app.js?v=3.0.0"></script>
+  <link rel="stylesheet" href="styles.css?v=3.1.0">
+  <link rel="stylesheet" href="instruments.css?v=3.1.0">
+  <script type="module" src="instrument-app.js?v=3.1.0"></script>
 </head>
 <body class="instrument-page">
   <header class="topbar">
-    <a class="brand" id="back-instruments" href="./"><span class="brand-icon">←</span> <span id="back-label">Instrumentos</span><span> / MIDI STUDIO</span></a>
-    <nav class="manual-links" aria-label="Manuais"><a class="manual-link" id="main-manual-link" target="_blank" rel="noreferrer">Manual ↗</a><a class="manual-link" id="manual-link" target="_blank" rel="noreferrer">Manual MIDI ↗</a></nav>
+    <a class="brand" id="back-instruments" href="./"><span class="brand-icon">←</span> <span id="back-label">Instruments</span><span> / MIDI STUDIO</span></a>
+    <nav class="manual-links" aria-label="Manuals"><a class="manual-link" id="main-manual-link" target="_blank" rel="noreferrer">Manual ↗</a><a class="manual-link" id="manual-link" target="_blank" rel="noreferrer">MIDI manual ↗</a></nav>
   </header>
   <main>
     <section class="instrument-intro"><p class="eyebrow" id="instrument-brand"></p><h1 id="instrument-title"></h1><p id="instrument-subtitle"></p></section>
-    <section class="connection card" aria-label="Ligação MIDI">
-      <div class="connection-heading"><span class="status-dot" id="status-dot"></span><div><strong id="connection-status">Não ligado</strong><small id="connection-detail">Escolhe a saída e o canal</small></div></div>
-      <button id="connect" class="primary">Ligar MIDI ↗</button>
-      <label class="compact">Saída MIDI<select id="output"><option value="">Selecionar saída</option></select></label>
-      <label class="compact channel">Canal<select id="channel"></select></label>
-      <label class="demo-switch"><input type="checkbox" id="demo"> Modo demo</label>
+    <section class="connection card" aria-label="MIDI connection">
+      <div class="connection-heading"><span class="status-dot" id="status-dot"></span><div><strong id="connection-status">Not connected</strong><small id="connection-detail">Choose an output and channel</small></div></div>
+      <button id="connect" class="primary">Connect MIDI ↗</button>
+      <label class="compact">MIDI output<select id="output"><option value="">Select output</option></select></label>
+      <label class="compact channel">Channel<select id="channel"></select></label>
+      <label class="demo-switch"><input type="checkbox" id="demo"> Demo mode</label>
     </section>
     <div id="notification" class="notification" role="alert" hidden></div>
-    <section id="preset-quick" class="preset-quick card" aria-label="Presets de performance" hidden></section>
+    <section id="preset-quick" class="preset-quick card" aria-label="Performance presets" hidden></section>
     <section class="instrument-workspace">
       <div class="instrument-scene">
-        <div class="section-heading"><span>01 / O INSTRUMENTO</span><span id="instrument-edition"></span></div>
+        <div class="section-heading"><span>01 / THE INSTRUMENT</span><span id="instrument-edition"></span></div>
         <div class="hardware" id="hardware">
           <header class="hardware-heading"><span id="hardware-brand"></span><strong id="hardware-name"></strong><output id="hardware-screen">MIDI STUDIO</output></header>
+          <section id="onboard-editor" class="onboard-editor" aria-label="Onboard parameter editor">
+            <div class="onboard-navigation"><label>Section<select id="onboard-section"></select></label><label>Parameter<select id="onboard-parameter"></select></label></div>
+            <div id="onboard-control"></div>
+          </section>
           <div id="physical-controls" class="hardware-controls"></div>
           <div id="note-controls"></div>
           <div id="transport-controls" class="transport-controls"></div>
         </div>
-        <p class="pedal-tip">Arrasta os knobs. Passa o rato ou toca em ? para explorar.</p>
-        <p class="state-note" id="state-note" hidden>~ Valores anteriores ao programa carregado. Move um controlo para o definir novamente.</p>
-        <button id="stop-notes" hidden>Parar notas ativas</button>
+        <p class="pedal-tip">Drag a knob or use its slider. Hover for 3 seconds, focus a control or tap ? for help.</p>
+        <p class="state-note" id="state-note" hidden>~ Values from before the loaded program. Move a control to set it again.</p>
+        <button id="stop-notes" hidden>Stop active notes</button>
       </div>
-      <section class="control-area card" aria-label="Comandos do instrumento">
-        <div class="panel-heading"><div><p class="eyebrow">02 / EXPLORAR</p><h2>Controlos e performance</h2></div></div>
-        <label class="instrument-search">Encontrar controlo<input id="control-search" type="search" placeholder="Nome ou função"></label>
-        <div id="sections" class="tabs instrument-tabs" role="tablist" aria-label="Secções do instrumento"></div>
+      <details id="parameter-inspector" class="control-area card">
+        <summary>Parameter browser / Preset library</summary>
+        <div class="panel-heading"><div><p class="eyebrow">02 / EXPLORE</p><h2>All parameters</h2></div></div>
+        <label class="instrument-search">Find a control<input id="control-search" type="search" placeholder="Name or function"></label>
+        <div id="sections" class="tabs instrument-tabs" role="tablist" aria-label="Instrument sections"></div>
         <div id="parameter-panels"></div>
         <section id="panel-presets" role="tabpanel" aria-labelledby="tab-presets" hidden></section>
-        <p id="search-empty" hidden>Nenhum controlo corresponde à pesquisa.</p>
-        <label class="technical-switch"><input type="checkbox" id="technical-values"> Valores MIDI</label>
-      </section>
+        <p id="search-empty" hidden>No controls match your search.</p>
+      </details>
     </section>
+    <label class="technical-switch"><input type="checkbox" id="technical-values"> MIDI values</label>
     <section class="bottom-grid">
-      <details class="card guide"><summary>Ligação e funcionamento <span>+</span></summary><p id="connection-guide"></p><p>Os valores refletem gestos enviados pela interface, não uma leitura dos botões físicos. Ligações e navegação não enviam configurações automaticamente.</p><ul id="device-notes"></ul></details>
-      <details class="card activity" aria-label="Monitor MIDI"><summary>Monitor MIDI</summary><button id="clear-log" class="text-button">Limpar</button><p id="monitor-empty">Os próximos gestos aparecem aqui.</p><ol id="log" aria-label="Mensagens MIDI recentes"></ol></details>
+      <details class="card guide"><summary>Connection and setup <span>+</span></summary><p id="connection-guide"></p><p>Values reflect gestures sent from the interface, not physical knob readback. Connecting and navigating never sends settings automatically.</p><ul id="device-notes"></ul></details>
+      <details class="card activity" aria-label="MIDI monitor"><summary>MIDI monitor</summary><button id="clear-log" class="text-button">Clear</button><p id="monitor-empty">Your next gestures appear here.</p><ol id="log" aria-label="Recent MIDI messages"></ol></details>
     </section>
   </main>
-  <footer><span>Sem contas, sem tracking, sem áudio na cloud.</span><a href="https://github.com/JoaoBAfonso/mood-mkii-controller" target="_blank" rel="noreferrer">Código no GitHub ↗</a></footer>
-  <dialog id="confirm-dialog"><form method="dialog"><p class="eyebrow">CONFIRMAR COMANDO</p><h2>Antes de continuar…</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Cancelar</button><button value="confirm" class="danger">Confirmar</button></div></form></dialog>
+  <footer><span>No accounts, tracking or cloud audio.</span><a href="https://github.com/JoaoBAfonso/mood-mkii-controller" target="_blank" rel="noreferrer">Code on GitHub ↗</a></footer>
+  <dialog id="confirm-dialog"><form method="dialog"><p class="eyebrow">CONFIRM COMMAND</p><h2>Before continuing…</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Cancel</button><button value="confirm" class="danger">Confirm</button></div></form></dialog>
 </body>
 </html>

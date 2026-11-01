@@ -9,16 +9,16 @@ const open = async (page, id) => {
 };
 test('pedal section retains Chase Bliss routes; selection and browser history send nothing', async ({ page }) => {
   await page.goto('/?section=pedals');
-  await expect(page.getByRole('navigation', { name: 'Selecionar pedal' }).getByRole('link')).toHaveCount(10);
+  await expect(page.getByRole('navigation', { name: 'Select pedal' }).getByRole('link')).toHaveCount(10);
   for (const pedal of pedals) {
-    await page.getByRole('link', { name: `Controlar ${pedal.name} · ${pedal.variant}`, exact: true }).click();
+    await page.getByRole('link', { name: `Control ${pedal.name} · ${pedal.variant}`, exact: true }).click();
     await expect(page.locator('body')).toHaveAttribute('data-pedal', pedal.id);
     expect(await messages(page)).toEqual([]);
     await expect(page).toHaveURL(new RegExp(`pedal=${pedal.id}$`));
     await page.locator('#back-pedals').click();
     await expect(page.locator('#pedal-library')).toBeVisible();
   }
-  await page.getByRole('link', { name: 'Controlar Lost + Found · Verde', exact: true }).click();
+  await page.getByRole('link', { name: 'Control Lost + Found · Green', exact: true }).click();
   await page.goBack();
   await expect(page.locator('#pedal-library')).toBeVisible();
   await page.goForward();
@@ -143,7 +143,7 @@ test('Generation Loss model menu, Classic labels and AUX use documented commands
 });
 test('Lost + Found A/B selection, channel swaps, presets bank and random state', async ({ page }) => {
   await open(page, 'lost-found');
-  await page.getByRole('button', { name: 'Selecionar PITCH · L', exact: true }).click();
+  await page.getByRole('button', { name: 'Select PITCH · L', exact: true }).click();
   await page.getByRole('button', { name: 'B · Pitch Repeater', exact: true }).click();
   await expect(page.locator('#pedal-cc-17')).toHaveValue('127');
   await expect(page.locator('#effect-title-21')).toContainText('Pitch Repeater');
@@ -159,7 +159,7 @@ test('Lost + Found A/B selection, channel swaps, presets bank and random state',
   await clearMessages(page);
   await page.locator('#cc-114').click();
   expect(await messages(page)).toEqual([[177, 114, 1]]);
-  await expect(page.locator('#physical-preset option:checked')).toHaveText('NÃO SINCRONIZADO');
+  await expect(page.locator('#physical-preset option:checked')).toHaveText('UNKNOWN');
   await expect(page.locator('#pedal-knobs [data-cc="14"]')).toHaveClass(/stale/);
   await page.locator('#tab-hidden').click();
   await page.locator('#pedal-cc-25').fill('60');
@@ -170,16 +170,16 @@ test('BAD MOOD station/chord menus synchronize raw knobs without MOOD waveform/b
   await open(page, 'bad-mood');
   await expect(page.locator('#station-select')).toBeDisabled();
   await expect(page.locator('#chord-select')).toBeDisabled();
-  await page.getByRole('button', { name: 'Selecionar RADIO', exact: true }).click();
+  await page.getByRole('button', { name: 'Select RADIO', exact: true }).click();
   await clearMessages(page); await page.locator('#station-select').selectOption('97');
   expect(await messages(page)).toEqual([[177, 19, 97]]);
   await expect(page.locator('#pedal-cc-19')).toHaveValue('97');
-  await page.getByRole('button', { name: 'Selecionar FLIP', exact: true }).click();
+  await page.getByRole('button', { name: 'Select FLIP', exact: true }).click();
   await clearMessages(page); await page.locator('#chord-select').selectOption('43');
   expect(await messages(page)).toEqual([[177, 17, 43]]);
   await page.locator('#pedal-cc-17').fill('44');
   await expect(page.locator('#chord-select')).toHaveValue('43');
-  await expect(page.locator('[data-position="17"] output')).toContainText('Acorde 17');
+  await expect(page.locator('[data-position="17"] output')).toContainText('Chord 17');
   await page.locator('#tab-hidden').click(); await page.locator('#pedal-cc-25').fill('60');
   await expect(page.locator('#cc-25')).toHaveValue('60');
   await expect(page.locator('[data-position="15"] label')).toContainText('BALANCE');
@@ -190,27 +190,27 @@ test('changing pedal releases notes first, rejects failed releases and never mig
   await open(page, 'bad-mood');
   await page.locator('#pedal-cc-14').fill('29');
   await page.locator('#tab-synth').click();
-  await page.getByRole('button', { name: 'Nota C4', exact: true }).focus();
+  await page.getByRole('button', { name: 'Note C4', exact: true }).focus();
   await page.keyboard.down('Enter');
   await page.evaluate(() => { window.failNoteOff = true; });
   await page.locator('#back-pedals').click();
   await expect(page.locator('body')).toHaveAttribute('data-pedal', 'bad-mood');
-  await expect(page.locator('#notification')).toContainText('Não foi possível parar');
+  await expect(page.locator('#notification')).toContainText('Could not stop');
   await page.evaluate(() => { window.failNoteOff = false; });
   const released = page.waitForFunction(() => window.sent.some((message) => message[0] === 129 && message[1] === 60));
   await page.locator('#stop-notes').click(); await released;
   await page.locator('#back-pedals').click();
-  await page.getByRole('link', { name: 'Controlar Lost + Found · Verde', exact: true }).click();
+  await page.getByRole('link', { name: 'Control Lost + Found · Green', exact: true }).click();
   await expect(page.locator('#pedal-cc-14')).toHaveValue('64');
   await expect(page.locator('#output')).toHaveValue('');
   expect(await messages(page)).toEqual([]);
 });
 test('unknown pedal fails safely and landing fits small screens', async ({ page }) => {
   await page.goto('/controller.html?pedal=wrong');
-  await expect(page.locator('main')).toContainText('Pedal desconhecido');
+  await expect(page.locator('main')).toContainText('Unknown pedal');
   await expect(page.locator('#connect')).toHaveCount(0);
   expect(await messages(page)).toEqual([]);
-  await page.getByRole('link', { name: '← Selecionar pedal', exact: true }).click();
+  await page.getByRole('link', { name: '← Select pedal', exact: true }).click();
   for (const width of [320, 360, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

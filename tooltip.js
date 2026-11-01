@@ -4,8 +4,10 @@ export function createHelpTooltip() {
   document.body.append(tip);
   let active;
   let timer;
+  let hoverTimer;
   function hide() {
     clearTimeout(timer);
+    clearTimeout(hoverTimer);
     if (active) active.pinned = false;
     active?.button.setAttribute('aria-expanded', 'false');
     active = undefined; tip.hidden = true;
@@ -26,7 +28,7 @@ export function createHelpTooltip() {
     const below = rect.bottom + 8;
     tip.style.top = `${above >= 8 ? above : Math.min(below, innerHeight - tip.offsetHeight - 8)}px`;
   }
-  const later = () => { clearTimeout(timer); timer = setTimeout(hide, 180); };
+  const later = () => { clearTimeout(hoverTimer); clearTimeout(timer); if (!active?.pinned) timer = setTimeout(hide, 180); };
   tip.onpointerenter = () => clearTimeout(timer);
   tip.onpointerleave = later;
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') hide(); });
@@ -41,14 +43,21 @@ export function createHelpTooltip() {
     attach(root, text, name) {
       if (!text()) return;
       const button = document.createElement('button'); button.type = 'button'; button.className = 'control-help';
-      button.textContent = '?'; button.setAttribute('aria-label', `Ajuda: ${name}`);
+      button.textContent = '?'; button.setAttribute('aria-label', `Help: ${name}`);
       button.setAttribute('aria-controls', tip.id); button.setAttribute('aria-expanded', 'false');
       const entry = { root, button, text, pinned: false };
       root.append(button);
       root.querySelectorAll('input,select,button').forEach((input) => input.setAttribute('aria-describedby', tip.id));
-      root.addEventListener('pointerenter', (event) => { if (event.pointerType !== 'touch') show(entry); });
+      root.addEventListener('pointerenter', (event) => {
+        if (event.pointerType === 'touch' || active?.pinned) return;
+        if (active && active !== entry) hide();
+        clearTimeout(timer); clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(() => {
+          if (root.isConnected && root.matches(':hover') && root.getClientRects().length) show(entry);
+        }, 3000);
+      });
       root.addEventListener('pointerleave', later);
-      root.addEventListener('focusin', () => show(entry));
+      root.addEventListener('focusin', (event) => { if (event.target.matches(':focus-visible') && !active?.pinned) show(entry); });
       root.addEventListener('focusout', (event) => { if (!root.contains(event.relatedTarget)) later(); });
       button.onclick = () => { if (entry.pinned) hide(); else { show(entry); entry.pinned = true; } };
     },

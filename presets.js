@@ -4,10 +4,10 @@ export const emptyLibrary = (pedalId) => ({ version: 1, pedalId, presets: {}, se
 
 export function validateLibrary(value, pedalId, slotCount = presetSlots) {
   if (!value || typeof value !== 'object' || value.version !== 1 || value.pedalId !== pedalId) {
-    throw new Error('Este ficheiro não é uma biblioteca compatível com este pedal.');
+    throw new Error('This file is not a compatible library for this instrument.');
   }
   if (!value.presets || typeof value.presets !== 'object' || Array.isArray(value.presets) || !Array.isArray(value.setlist)) {
-    throw new Error('Biblioteca inválida: faltam os presets ou a lista de atuação.');
+    throw new Error('Invalid library: presets or setlist are missing.');
   }
   const library = emptyLibrary(pedalId);
   for (const [key, preset] of Object.entries(value.presets)) {
@@ -15,12 +15,12 @@ export function validateLibrary(value, pedalId, slotCount = presetSlots) {
     if (!Number.isInteger(slot) || slot < 1 || slot > slotCount || String(slot) !== key ||
         !preset || typeof preset.name !== 'string' || preset.name.length > 80 ||
         typeof preset.notes !== 'string' || preset.notes.length > 1000 || typeof preset.favorite !== 'boolean') {
-      throw new Error(`Biblioteca inválida: verifica os slots (1–${slotCount}), nomes e notas.`);
+      throw new Error(`Invalid library: check slots (1–${slotCount}), names and notes.`);
     }
     library.presets[key] = { name: preset.name, notes: preset.notes, favorite: preset.favorite };
   }
   if (value.setlist.length > 500 || value.setlist.some((slot) => !Number.isInteger(slot) || slot < 1 || slot > slotCount)) {
-    throw new Error(`Lista de atuação inválida: usa até 500 entradas de slots 1–${slotCount}.`);
+    throw new Error(`Invalid setlist: use up to 500 entries from slots 1–${slotCount}.`);
   }
   library.setlist = [...value.setlist];
   return library;
@@ -30,33 +30,33 @@ export const presetTitle = (library, slot) => slot === 0 ? 'Live' : library.pres
 export function createPresetManager({ pedal, panel, quick, recall, current, targetKey, confirm, notify, onChange }) {
   const slotCount = pedal.presets?.count ?? presetSlots;
   const supportsLive = !pedal.presets || pedal.presets.live !== undefined;
-  const deviceName = pedal.category === 'synths' ? 'instrumento' : 'pedal';
+  const deviceName = pedal.category === 'synths' ? 'instrument' : 'pedal';
   let library = emptyLibrary(pedal.id);
   try {
     const saved = localStorage.getItem(libraryKey(pedal.id));
     if (saved !== null) library = validateLibrary(JSON.parse(saved), pedal.id, slotCount);
-  } catch (error) { notify(`Não foi possível ler a biblioteca local: ${error.message}`); }
+  } catch (error) { notify(`Could not read the local library: ${error.message}`); }
   let selected = 1;
   let page = 0;
   const cursors = new Map();
   const $ = (id) => document.getElementById(id);
   panel.innerHTML = `
     <div class="preset-manager">
-      <div class="preset-library-heading"><h3>A tua biblioteca</h3><div class="library-files"><button id="preset-export">Exportar</button><button id="preset-import">Importar</button><input id="preset-file" type="file" accept=".json,application/json" hidden></div></div>
-      <p class="panel-description">Dá nomes aos slots do ${deviceName} e prepara a ordem do concerto. Nomes e notas ficam neste navegador.</p>
-      <div class="library-filters"><label>Pesquisar<input id="preset-search" type="search" placeholder="Nome, nota ou slot"></label><label class="favorite-filter"><input id="preset-only-favorites" type="checkbox"> Só favoritos</label></div>
-      <div id="preset-grid" class="preset-grid" aria-label="Slots de presets"></div>
-      <div class="library-pagination"><button id="preset-page-prev" aria-label="Página anterior">←</button><span id="preset-page-label" aria-live="polite"></span><button id="preset-page-next" aria-label="Página seguinte">→</button></div>
-      <section class="preset-editor" aria-label="Editar preset">
-        <div class="preset-editor-heading"><label>Slot<input id="preset-slot" type="number" min="1" max="${slotCount}" step="1" value="1"></label><label>Nome<input id="preset-name" maxlength="80" placeholder="Nome do som"></label><label class="preset-favorite"><input id="preset-favorite" type="checkbox"> Favorito</label></div>
-        <label>Notas de performance<textarea id="preset-notes" maxlength="1000" rows="2" placeholder="Música, parte, transição, tempo…"></textarea></label>
-        <div class="preset-actions"><button id="preset-organize">Guardar nome e notas</button><button id="preset-add-setlist">Adicionar à atuação</button><button id="recall-preset" class="primary">Carregar preset</button></div>
+      <div class="preset-library-heading"><h3>Your library</h3><div class="library-files"><button id="preset-export">Export</button><button id="preset-import">Import</button><input id="preset-file" type="file" accept=".json,application/json" hidden></div></div>
+      <p class="panel-description">Name the ${deviceName}'s slots and prepare your set. Names and notes stay in this browser.</p>
+      <div class="library-filters"><label>Search<input id="preset-search" type="search" placeholder="Name, note or slot"></label><label class="favorite-filter"><input id="preset-only-favorites" type="checkbox"> Favorites only</label></div>
+      <div id="preset-grid" class="preset-grid" aria-label="Preset slots"></div>
+      <div class="library-pagination"><button id="preset-page-prev" aria-label="Previous page">←</button><span id="preset-page-label" aria-live="polite"></span><button id="preset-page-next" aria-label="Next page">→</button></div>
+      <section class="preset-editor" aria-label="Edit preset">
+        <div class="preset-editor-heading"><label>Slot<input id="preset-slot" type="number" min="1" max="${slotCount}" step="1" value="1"></label><label>Name<input id="preset-name" maxlength="80" placeholder="Sound name"></label><label class="preset-favorite"><input id="preset-favorite" type="checkbox"> Favorite</label></div>
+        <label>Performance notes<textarea id="preset-notes" maxlength="1000" rows="2" placeholder="Song, section, transition, tempo…"></textarea></label>
+        <div class="preset-actions"><button id="preset-organize">Save name and notes</button><button id="preset-add-setlist">Add to setlist</button><button id="recall-preset" class="primary">Load preset</button></div>
         <div id="preset-save-control"></div>
       </section>
-      <section class="setlist-section" aria-label="Lista de atuação"><h3>Lista de atuação</h3><p class="hint">Segue a ordem com Anterior / Seguinte. Podes repetir um preset em várias músicas.</p><ol id="preset-setlist"></ol><p id="setlist-empty">Adiciona os presets pela ordem em que vais tocar.</p></section>
+      <section class="setlist-section" aria-label="Setlist"><h3>Setlist</h3><p class="hint">Follow your set with Previous / Next. A preset can appear more than once.</p><ol id="preset-setlist"></ol><p id="setlist-empty">Add presets in performance order.</p></section>
       <p class="preset-local-status" id="preset-local-status" role="status" aria-live="polite"></p>
     </div>`;
-  quick.innerHTML = `<div class="current-preset"><span>PRESET</span><strong id="current-preset-name">Escolhe um preset</strong><small id="current-preset-position"></small></div><div class="quick-preset-actions"><button id="preset-previous" aria-label="Preset anterior">← Anterior</button><button id="preset-next" aria-label="Preset seguinte">Seguinte →</button>${supportsLive ? '<button id="live-preset">Live</button>' : ''}<button id="open-presets">Biblioteca</button></div>`;
+  quick.innerHTML = `<div class="current-preset"><span>PRESET</span><strong id="current-preset-name">Choose a preset</strong><small id="current-preset-position"></small></div><div class="quick-preset-actions"><button id="preset-previous" aria-label="Previous preset">← Previous</button><button id="preset-next" aria-label="Next preset">Next →</button>${supportsLive ? '<button id="live-preset">Live</button>' : ''}<button id="open-presets">Library</button></div>`;
   const metadata = () => library.presets[selected] || { name: '', notes: '', favorite: false };
   const candidate = () => structuredClone(library);
   function commit(next) {
@@ -64,19 +64,19 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
       const checked = validateLibrary(next, pedal.id, slotCount);
       localStorage.setItem(libraryKey(pedal.id), JSON.stringify(checked));
       library = checked;
-      $('preset-local-status').textContent = 'Organização guardada neste navegador.';
+      $('preset-local-status').textContent = 'Library saved in this browser.';
       render();
       onChange();
       return true;
     } catch (error) {
-      notify(`Não foi possível guardar a organização: ${error.message}`);
+      notify(`Could not save the library: ${error.message}`);
       return false;
     }
   }
   function readSlot() {
     const input = $('preset-slot');
     if (input.value === '' || !input.validity.valid) {
-      notify(`Escolhe um slot inteiro entre 1 e ${slotCount}.`);
+      notify(`Choose a whole-number slot from 1 to ${slotCount}.`);
       return null;
     }
     return Number(input.value);
@@ -91,11 +91,11 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
     renderGrid();
   }
   function filteredSlots() {
-    const query = $('preset-search').value.trim().toLocaleLowerCase('pt-PT');
+    const query = $('preset-search').value.trim().toLocaleLowerCase('en');
     return Array.from({ length: slotCount }, (_, index) => index + 1).filter((slot) => {
       const preset = library.presets[slot];
       return (!$('preset-only-favorites').checked || preset?.favorite) &&
-        `${slot} ${preset?.name || ''} ${preset?.notes || ''}`.toLocaleLowerCase('pt-PT').includes(query);
+        `${slot} ${preset?.name || ''} ${preset?.notes || ''}`.toLocaleLowerCase('en').includes(query);
     });
   }
   function renderGrid() {
@@ -114,7 +114,7 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
       $('preset-grid').append(button);
     }
     if (!slots.length) {
-      const empty = document.createElement('p'); empty.textContent = 'Nenhum preset corresponde à pesquisa.'; $('preset-grid').append(empty);
+      const empty = document.createElement('p'); empty.textContent = 'No presets match your search.'; $('preset-grid').append(empty);
     }
     $('preset-page-label').textContent = `${slots.length} slots · ${page + 1} / ${pages}`;
     $('preset-page-prev').disabled = page === 0;
@@ -145,14 +145,14 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
       const row = document.createElement('li');
       const play = document.createElement('button'); play.className = 'setlist-play';
       play.textContent = `${index + 1}. ${presetTitle(library, slot)}`;
-      play.setAttribute('aria-label', `Carregar entrada ${index + 1}: ${presetTitle(library, slot)}`);
+      play.setAttribute('aria-label', `Load entry ${index + 1}: ${presetTitle(library, slot)}`);
       play.setAttribute('aria-current', String(position() === index));
       const tag = document.createElement('small'); tag.textContent = `Slot ${slot}`; play.append(tag);
       play.onclick = () => loadPosition(index); row.append(play);
-      for (const [action, label, text] of [['up', 'Subir', '↑'], ['down', 'Descer', '↓'], ['remove', 'Remover', '×']]) {
+      for (const [action, label, text] of [['up', 'Move up', '↑'], ['down', 'Move down', '↓'], ['remove', 'Remove', '×']]) {
         const button = document.createElement('button'); button.textContent = text;
         button.dataset.setlistIndex = index; button.dataset.setlistAction = action;
-        button.setAttribute('aria-label', `${label} entrada ${index + 1}`);
+        button.setAttribute('aria-label', `${label} entry ${index + 1}`);
         button.disabled = (action === 'up' && index === 0) || (action === 'down' && index === library.setlist.length - 1);
         button.onclick = () => {
           const next = candidate();
@@ -175,9 +175,9 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
   }
   function update() {
     const slot = current();
-    $('current-preset-name').textContent = slot === '' ? 'Escolhe um preset' : presetTitle(library, Number(slot));
+    $('current-preset-name').textContent = slot === '' ? 'Choose a preset' : presetTitle(library, Number(slot));
     const index = position();
-    $('current-preset-position').textContent = library.setlist.length && index >= 0 ? `Atuação · ${index + 1} / ${library.setlist.length}` : slot && slot !== '0' ? `Slot ${slot}` : '';
+    $('current-preset-position').textContent = library.setlist.length && index >= 0 ? `Setlist · ${index + 1} / ${library.setlist.length}` : slot && slot !== '0' ? `Slot ${slot}` : '';
     $('preset-previous').disabled = index <= 0;
     $('preset-next').disabled = index === sequence().length - 1;
     renderGrid();
@@ -215,12 +215,12 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
     const file = $('preset-file').files[0]; $('preset-file').value = '';
     if (!file) return;
     try {
-      if (file.size > 1024 * 1024) throw new Error('O ficheiro deve ter no máximo 1 MB.');
+      if (file.size > 1024 * 1024) throw new Error('The file must be no larger than 1 MB.');
       const imported = validateLibrary(JSON.parse(await file.text()), pedal.id, slotCount);
-      confirm(`Substituir os nomes, notas, favoritos e lista de atuação locais? Os presets do ${deviceName} ficam intactos.`, () => {
+      confirm(`Replace local names, notes, favorites and setlist? The ${deviceName}'s presets will not change.`, () => {
         if (commit(imported)) { cursors.clear(); choose(selected); update(); }
       });
-    } catch (error) { notify(`Não foi possível importar: ${error.message}`); }
+    } catch (error) { notify(`Could not import: ${error.message}`); }
   };
   choose(selected); update();
   return { update, readSlot, title: (slot) => presetTitle(library, slot) };

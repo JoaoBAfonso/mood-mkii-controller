@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { controls, controlValueLabel, hiddenPedalMap } from '../controls.js';
+import { controls, controlValueLabel, controlEndpoints, hiddenPedalMap } from '../controls.js';
 import { ccMessage, pcMessage, noteMessage, sendMessage } from '../midi.js';
 
 test('every documented CC appears exactly once, including legacy tap and synth CC0', () => {
@@ -23,7 +23,7 @@ test('invalid channels, values and presets cannot reach hardware', () => {
 });
 test('routing, sync and buffer use the exact manual values, not generic booleans', () => {
   assert.deepEqual(controls.find((c) => c.cc === 31).choices, [
-    { value: 0, label: 'Loop → Wet' }, { value: 2, label: 'Sem sync' }, { value: 3, label: 'Wet → Loop' },
+    { value: 0, label: 'Loop → Wet' }, { value: 2, label: 'No sync' }, { value: 3, label: 'Wet → Loop' },
   ]);
   assert.deepEqual(controls.find((c) => c.cc === 33).choices.map((o) => o.value), [0, 2]);
   assert.deepEqual(controls.find((c) => c.cc === 22).choices.map((o) => o.value), [0, 2, 3]);
@@ -59,7 +59,18 @@ test('stepped sample rate and mode-dependent speed labels cover all CC values', 
 test('Hidden maps each physical position to its dedicated CC from the manual', () => {
   assert.deepEqual(hiddenPedalMap, { 14: 24, 15: 25, 16: 26, 17: 27, 18: 28, 19: 29, 21: 31, 22: 32, 23: 33 });
   for (const cc of Object.values(hiddenPedalMap)) assert.ok(controls.some((control) => control.cc === cc));
-  assert.equal(controlValueLabel(25, 54, {}), 'Quadrada');
-  assert.equal(controlValueLabel(25, 55, {}), 'Senoidal');
+  assert.equal(controlValueLabel(25, 54, {}), 'Square');
+  assert.equal(controlValueLabel(25, 55, {}), 'Sine');
   assert.equal(controlValueLabel(25, 127, {}), 'Random');
+});
+test('MOOD endpoint labels retain musical modes and documented sample-rate steps', () => {
+  assert.deepEqual(controlEndpoints(19, { 23: 2 }), ['−4×', '+4×']);
+  assert.deepEqual(controlEndpoints(19, { 23: 3 }), ['Reverse', 'Forward']);
+  assert.equal(controlValueLabel(15, 0, {}), 'Dry');
+  assert.equal(controlValueLabel(15, 64, {}), 'Mid');
+  assert.equal(controlValueLabel(15, 127, {}), 'Wet');
+  assert.equal(controlValueLabel(18, 5, {}), '3k Hz');
+  assert.equal(controlValueLabel(18, 16, {}), '4k Hz');
+  assert.equal(controlValueLabel(14, 61, { 51: 1 }), '1/8 triplet');
+  assert.equal(controlValueLabel(16, 110, { 51: 1, 23: 2 }), '/2');
 });

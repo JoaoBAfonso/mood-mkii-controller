@@ -24,6 +24,7 @@ export async function mockMidi(page) {
 export async function connect(page) {
   await page.locator('#connect').click();
   await page.locator('#output').selectOption('test-out');
+  if (await page.locator('#parameter-inspector').count()) await page.locator('#parameter-inspector').evaluate((details) => { details.open = true; });
 }
 export async function messages(page) { return page.evaluate(() => window.sent); }
 export async function clearMessages(page) { await page.evaluate(() => { window.sent = []; }); }

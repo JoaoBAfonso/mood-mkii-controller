@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pedals, getPedal } from '../pedals.js';
+import { pedals, getPedal, pedalControlEndpoints } from '../pedals.js';
 import { ccMessage } from '../midi.js';
 
 const expected = {
@@ -65,11 +65,30 @@ test('BAD MOOD chord labels follow all 48 documented intervals exactly', () => {
   for (let index = 0; index < pedal.chords.length; index++) {
     const start = pedal.chords[index].value;
     const end = (pedal.chords[index + 1]?.value ?? 128) - 1;
-    for (let value = start; value <= end; value++) assert.equal(pedal.label(17, value, { 21: 3 }), `Acorde ${index + 1}`);
+    for (let value = start; value <= end; value++) assert.equal(pedal.label(17, value, { 21: 3 }), `Chord ${index + 1}`);
   }
-  assert.equal(pedal.label(17, 43, { 21: 3 }), 'Acorde 17');
+  assert.equal(pedal.label(17, 43, { 21: 3 }), 'Chord 17');
   assert.deepEqual(pedal.stations.map((station) => station.value), [0,32,63,97,127]);
   assert.equal(pedal.controls.find((control) => control.cc === 25).kind, 'range');
-  assert.deepEqual(pedal.controls.find((control) => control.cc === 53).choices.map((choice) => choice.label), ['1/32','1/16','1/8 tercina','1/8','1/4','1/2','1/2 pontuada','1','2']);
+  assert.deepEqual(pedal.controls.find((control) => control.cc === 53).choices.map((choice) => choice.label), ['1/32','1/16','1/8 triplet','1/8','1/4','1/2','1/2 dotted','1','2']);
   assert.equal(pedal.controls.find((control) => control.cc === 33).name, 'CROSS input');
+});
+test('legacy labels describe knob positions and state-dependent endpoints without fake units', () => {
+  for (const pedal of pedals) {
+    for (const item of pedal.controls.filter(({ kind }) => kind === 'range')) {
+      for (const value of [0, 64, 127]) assert.doesNotMatch(pedal.label(item.cc, value, {}), /%/);
+      assert.equal(pedal.endpoints(item.cc, {}).length, 2);
+    }
+  }
+  const lost = getPedal('lost-found');
+  assert.deepEqual(pedalControlEndpoints(lost, 17, { 21: 2 }), ['Orchestral Swell', 'Pitch Repeater']);
+  assert.deepEqual(pedalControlEndpoints(lost, 17, { 21: 2, 74: 1 }), ['Impulse Synthesizer', 'Sympathetic Resonator']);
+  assert.equal(lost.label(15, 0), 'Dry');
+  assert.equal(lost.label(15, 64), 'Mid');
+  assert.equal(lost.label(15, 127), 'Wet');
+  const gen = getPedal('generation-loss-mkii');
+  assert.equal(gen.label(16, 62, {}), 'CAM-8');
+  assert.equal(gen.label(16, 63, {}), 'Between models');
+  assert.deepEqual(gen.endpoints(18, { 72: 1 }), ['Degraded', 'Clean']);
+  assert.equal(getPedal('bad-mood').label(19, 64, { 23: 2 }), 'Between stations');
 });

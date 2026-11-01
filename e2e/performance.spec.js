@@ -55,10 +55,10 @@ for (const pedal of pedals) {
     await clearMessages(page);
     await page.locator('#cc-111').click();
     await expect(page.locator('#confirm-text')).toContainText('Slot 122');
-    await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     expect(await messages(page)).toEqual([]);
     await page.locator('#cc-111').click();
-    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirm', exact: true }).click();
     expect(await messages(page)).toEqual([[177, 111, 122]]);
     await page.reload(); await page.locator('#open-presets').click();
     await page.locator('#preset-slot').fill('122'); await page.locator('#preset-slot').press('Tab');
@@ -77,23 +77,23 @@ test('setlist supports repeated slots, reordering, direct play and failure-safe 
   for (const slot of [4, 122, 4]) await add(page, slot);
   expect(await messages(page)).toEqual([]);
   await page.locator('#preset-next').click();
-  await expect(page.locator('#current-preset-position')).toHaveText('Atuação · 1 / 3');
+  await expect(page.locator('#current-preset-position')).toHaveText('Setlist · 1 / 3');
   await page.evaluate(() => { window.failAll = true; });
   await page.locator('#preset-next').click();
-  await expect(page.locator('#current-preset-position')).toHaveText('Atuação · 1 / 3');
+  await expect(page.locator('#current-preset-position')).toHaveText('Setlist · 1 / 3');
   expect(await messages(page)).toEqual([[193, 4]]);
   await page.evaluate(() => { window.failAll = false; });
   await page.locator('#preset-next').click(); await page.locator('#preset-next').click();
-  await expect(page.locator('#current-preset-position')).toHaveText('Atuação · 3 / 3');
+  await expect(page.locator('#current-preset-position')).toHaveText('Setlist · 3 / 3');
   await expect(page.locator('#preset-next')).toBeDisabled();
   await page.locator('#preset-previous').click();
   expect(await messages(page)).toEqual([[193, 4], [193, 122], [193, 4], [193, 122]]);
-  await page.getByRole('button', { name: 'Subir entrada 2', exact: true }).click();
+  await page.getByRole('button', { name: 'Move up entry 2', exact: true }).click();
   await expect(page.locator('#preset-setlist li').first()).toContainText('Preset 122');
-  await page.getByRole('button', { name: 'Remover entrada 3', exact: true }).click();
+  await page.getByRole('button', { name: 'Remove entry 3', exact: true }).click();
   await expect(page.locator('#preset-setlist li')).toHaveCount(2);
   await clearMessages(page);
-  await page.getByRole('button', { name: 'Carregar entrada 2: Preset 4', exact: true }).click();
+  await page.getByRole('button', { name: 'Load entry 2: Preset 4', exact: true }).click();
   expect(await messages(page)).toEqual([[193, 4]]);
   await page.locator('#channel').selectOption('3');
   await expect(page.locator('#current-preset-name')).toHaveText('Live');
@@ -101,7 +101,7 @@ test('setlist supports repeated slots, reordering, direct play and failure-safe 
   expect(await messages(page)).toEqual([[193, 4], [194, 122]]);
   await page.locator('#channel').selectOption('2');
   await expect(page.locator('#current-preset-name')).toHaveText('Preset 4');
-  await expect(page.locator('#current-preset-position')).toHaveText('Atuação · 2 / 2');
+  await expect(page.locator('#current-preset-position')).toHaveText('Setlist · 2 / 2');
 });
 test('import/export validates model, preserves library on errors and never sends MIDI', async ({ page }) => {
   await open(page, 'lost-found'); await page.locator('#open-presets').click();
@@ -118,15 +118,15 @@ test('import/export validates model, preserves library on errors and never sends
     await page.locator('#preset-file').setInputFiles({ name: 'presets.json', mimeType: 'application/json', buffer: Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)) });
   }
   await upload({ ...exported, pedalId: 'bad-mood' });
-  await expect(page.locator('#notification')).toContainText('Não foi possível importar');
+  await expect(page.locator('#notification')).toContainText('Could not import');
   await upload('{wrong');
-  await expect(page.locator('#notification')).toContainText('Não foi possível importar');
+  await expect(page.locator('#notification')).toContainText('Could not import');
   const next = { ...exported, presets: { 2: { name: '<img src=x onerror=alert(1)>', notes: '', favorite: false } }, setlist: [2, 2] };
   await upload(next);
-  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.locator('#preset-name')).toHaveValue('Eco');
   await upload(next);
-  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
   await expect(page.locator('#preset-grid')).toContainText('<img src=x onerror=alert(1)>');
   await expect(page.locator('#preset-grid img')).toHaveCount(0);
   await expect(page.locator('#preset-setlist li')).toHaveCount(2);
@@ -145,13 +145,19 @@ test('storage errors are explicit and never masquerade as saved metadata', async
 });
 test('help works on hover, keyboard and touch; mode and Classic changes refresh descriptions', async ({ page }) => {
   await open(page, 'bad-mood');
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
   await page.locator('[data-position="16"]').hover();
+  await page.clock.runFor(2999);
+  await expect(page.locator('#control-tooltip')).toBeHidden();
+  await page.clock.runFor(1);
   await expect(page.locator('#control-tooltip')).toBeVisible();
-  await expect(page.locator('#control-tooltip')).toContainText('oito passos');
+  await expect(page.locator('#control-tooltip')).toContainText('eight steps');
   await page.keyboard.press('Escape');
   await expect(page.locator('#control-tooltip')).toBeHidden();
-  await page.getByRole('button', { name: 'Selecionar RADIO', exact: true }).click();
+  await page.getByRole('button', { name: 'Select RADIO', exact: true }).click();
   await page.locator('#station-select').selectOption('97');
+  await page.keyboard.press('Tab');
   await page.locator('[data-position="16"] .control-help').focus();
   await expect(page.locator('#control-tooltip')).toContainText('Shoegaze');
   expect(await messages(page)).toEqual([[177, 23, 2], [177, 19, 97]]);
@@ -161,8 +167,26 @@ test('help works on hover, keyboard and touch; mode and Classic changes refresh 
   expect(await messages(page)).toEqual([]);
   await open(page, 'generation-loss-mkii');
   await page.locator('#classic-shortcut').click();
+  await page.keyboard.press('Tab');
   await page.locator('[data-position="18"] .control-help').focus();
-  await expect(page.locator('#control-tooltip')).toContainText('amostragem');
+  await expect(page.locator('#control-tooltip')).toContainText('sample rate');
+});
+test('hover help cancels on leaving and restarts its three-second delay on another control', async ({ page }) => {
+  await open(page);
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  const first = page.locator('[data-position="14"]');
+  const second = page.locator('[data-position="15"]');
+  await first.hover(); await page.clock.runFor(2000);
+  await second.hover(); await page.clock.runFor(2999);
+  await expect(page.locator('#control-tooltip')).toBeHidden();
+  await page.clock.runFor(1);
+  await expect(page.locator('#control-tooltip')).toBeVisible();
+  await first.hover();
+  await expect(page.locator('#control-tooltip')).toBeHidden();
+  await page.mouse.move(0, 0); await page.clock.runFor(4000);
+  await expect(page.locator('#control-tooltip')).toBeHidden();
+  expect(await messages(page)).toEqual([]);
 });
 test('touch help opens and closes without sending a control command', async ({ browser }) => {
   const page = await browser.newPage({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
@@ -183,9 +207,9 @@ test('Lost swap labels and Generation Classic Freeze reflect the effective sound
   await page.locator('#tab-dips').click();
   for (const cc of [72, 76, 77]) await page.locator(`#cc-${cc}`).click();
   await page.locator('#tab-performance').click();
-  await page.getByRole('button', { name: 'Selecionar FREEZE', exact: true }).click();
+  await page.getByRole('button', { name: 'Select FREEZE', exact: true }).click();
   await expect(page.locator('#pedal-cc-21 option:checked')).toHaveText('FREEZE');
-  await expect(page.locator('#mode-description-21')).toContainText('FREEZE captura');
+  await expect(page.locator('#mode-description-21')).toContainText('FREEZE captures');
 });
 test('library pagination reaches slot 122 and the manager fits mobile through desktop', async ({ page }) => {
   await open(page); await page.locator('#open-presets').click();

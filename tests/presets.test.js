@@ -39,5 +39,5 @@ test('every mode has substantial original performance help and dynamic controls 
   const length = bad.controls.find((control) => control.cc === 16);
   assert.match(controlHelp(bad, length, { 23: 2, 19: 97 }), /Shoegaze/);
   const gen = pedals.find((pedal) => pedal.id === 'generation-loss-mkii');
-  assert.match(controlHelp(gen, gen.controls.find((control) => control.cc === 18), { 72: 1 }), /amostragem/);
+  assert.match(controlHelp(gen, gen.controls.find((control) => control.cc === 18), { 72: 1 }), /sample rate/);
 });

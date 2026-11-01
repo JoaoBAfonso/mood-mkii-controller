@@ -1,6 +1,6 @@
-# Chase Bliss · MIDI Studio
+# MIDI Studio
 
-Independent, Portuguese-language Web MIDI controllers for pedals, synthesizers and drum machines. The initial hub separates **Pedais** and **Sintetizadores**; each equipment page has its own visual identity, official manual links and documented MIDI controls.
+Independent, English-language Web MIDI controllers for pedals, synthesizers and drum machines. The initial hub separates **Pedals** and **Synthesizers**; each equipment page has its own visual identity, official manual links and documented MIDI controls. Parameter names use manufacturers' original terminology.
 
 **Website:** https://JoaoBAfonso.github.io/mood-mkii-controller/
 
@@ -11,17 +11,19 @@ Independent, Portuguese-language Web MIDI controllers for pedals, synthesizers a
 - Green Lost + Found theme, blue VHS Generation Loss theme and monochrome patterned BAD MOOD Ink theme alongside the existing lavender MOOD.
 - Neutral studio hub with pedal colors confined to the instrument previews and controller pages.
 - Full manual and MIDI manual links in every controller header.
-- Performance-first controls: MIDI numbers and precise numeric editors are optional via **Valores MIDI**; the monitor is collapsed by default.
-- Hover/focus/touch help and original Portuguese mode summaries grounded in the complete manuals.
+- Performance-first controls: MIDI numbers and precise numeric editors are optional via **MIDI values**; the monitor is collapsed by default. Continuous controls show useful endpoints and documented units, not generic percentages.
+- Help appears after **three seconds of continuous hover**; keyboard focus or tapping **?** opens it immediately. Leaving a control cancels pending hover help.
+- On-instrument editors expose every documented parameter without leaving the hardware panel; the optional **Parameter browser** retains section browsing and search.
+- Hardware-inspired faders, capacitive keys, pedal mode diagrams and bipolar EQ displays complement rotary controls. Chase Bliss performance decks put bank navigation, modes and alternate parameters alongside the pedal.
 - Per-instrument local preset libraries with names, notes, favorites, search, pagination, JSON import/export and reorderable performance setlists.
 
 ### Equipment hub
 
-**Pedais** contains the original four Chase Bliss models plus **BOSS SL-2 Slicer**, **Strymon Deco v2**, **Strymon Mobius**, **Source Audio EQ2**, **Source Audio Nemesis ADT** and **Empress Reverb**.
+**Pedals** contains the original four Chase Bliss models plus **BOSS SL-2 Slicer**, **Strymon Deco v2**, **Strymon Mobius**, **Source Audio EQ2**, **Source Audio Nemesis ADT** and **Empress Reverb**.
 
-**Sintetizadores** contains **Behringer DeepMind 12**, **Arturia MicroFreak**, **Roland TR-8S** and **Behringer PRO-VS Mini**. Keyboard/pad views send documented Note On/Off messages; only instruments supporting standard pitch bend or real-time transport expose those controls.
+**Synthesizers** contains **Behringer DeepMind 12**, **Arturia MicroFreak**, **Roland TR-8S** and **Behringer PRO-VS Mini**. Keyboard/pad views send documented Note On/Off messages; only instruments supporting standard pitch bend or real-time transport expose those controls.
 
-The new multi-manufacturer controllers use each device's documented CC/NRPN encoding, parameter ranges and selectable values. NRPN data entry distinguishes seven-bit and fourteen-bit values. Preset libraries follow the hardware's actual recallable slot count and bank selection rather than inheriting Chase Bliss's 122 slots, Live program or save CC. Where no documented remote preset recall exists, no hardware preset controls are invented. Consult **Ligação e funcionamento** for MIDI receive settings and any assignable/default mapping requirements.
+The new multi-manufacturer controllers use each device's documented CC/NRPN encoding, parameter ranges and selectable values. NRPN data entry distinguishes seven-bit and fourteen-bit values. Preset libraries follow the hardware's actual recallable slot count and bank selection rather than inheriting Chase Bliss's 122 slots, Live program or save CC. Where no documented remote preset recall exists, no hardware preset controls are invented. Consult **Connection and setup** for MIDI receive settings and any assignable/default mapping requirements.
 
 Control search covers parameter names and contextual help. The visual hardware panel and section editors share independent last-sent values per output/channel and demo context. Failed sends retain the previous values; loading a program marks parameter values as unknown until individually changed. Bank Select and Program Change are sent as one ordered MIDI batch, with active notes released first.
 
@@ -37,7 +39,7 @@ DeepMind 12 and MicroFreak expose the 128 documented Program Change addresses in
 - All **61 documented CC numbers**, including hidden parameters, DIP switches, ramping, global settings, legacy tap tempo, preset saving and Synth controls.
 - Knob dragging, native sliders, precise numeric input and keyboard-accessible controls.
 - Separate normal/Hidden pedal banks, retaining each parameter's value when switching modes.
-- Tocar/Hidden tabs select the displayed bank without changing the hardware's CC104 state.
+- Play/Hidden tabs select the displayed bank without changing the hardware's CC104 state.
 - Selectable mode diagrams for Reverb, Delay, Slip, Env, Tape and Stretch, plus routing and ramping waveform illustrations.
 - Demo mode that sends nothing to hardware, explicit MIDI errors, hot-plug support and an outgoing MIDI monitor.
 - Preset recall via PC0 (Live) and PC1–122; save via CC111 with overwrite confirmation.
@@ -49,7 +51,7 @@ DeepMind 12 and MicroFreak expose the 128 documented Program Change addresses in
 
 Open the HTTPS site in a Web MIDI-compatible browser, preferably desktop Chrome or Edge. Connect a USB–MIDI interface to the computer, then connect its output to the pedal's **1/4-inch TRS MIDI input using Chase Bliss-compatible conversion**, such as MIDIBox. The pedal is not a USB MIDI device, and not every generic TRS adapter is compatible.
 
-Click **Ligar MIDI**, grant permission, select the interface output and choose the pedal channel (default **2**). Turn demo mode off to send real messages. Connecting never automatically sends the displayed settings. A connected interface is not proof that the pedal is receiving messages.
+Click **Connect MIDI**, grant permission, select the interface output and choose the pedal channel (default **2**). Turn demo mode off to send real messages. Connecting never automatically sends the displayed settings. A connected interface is not proof that the pedal is receiving messages.
 
 To change the pedal's channel, hold both footswitches while powering it on and send a Program Change on the intended channel.
 
@@ -70,9 +72,9 @@ The manual does **not document SysEx or a state readback protocol**. This applic
 
 ### Hidden bank and state isolation
 
-Selecting the **Tocar** tab shows the normal pedal bank; selecting **Hidden** shows the dedicated Hidden CC bank. Mouse and keyboard tab navigation restore the bank's existing values **without sending MIDI or changing CC104**. The other tabs retain the current pedal view.
+Selecting the **Play** tab shows the normal pedal bank; selecting **Hidden** shows the dedicated Hidden CC bank. Mouse and keyboard tab navigation restore the bank's existing values **without sending MIDI or changing CC104**. The other tabs retain the current pedal view.
 
-Clicking **Menu alternativo no pedal** sends **only CC104** and shows the corresponding bank. Neither tab navigation nor hardware mode changes replay or overwrite the other bank's values. The mapping follows the [main manual's Hidden Options diagram](https://www.chasebliss.com/s/MOOD-MKII_Manual_Pedal_Chase-Bliss.pdf):
+Clicking the pedal alternate-menu control sends **only CC104** and shows the corresponding bank. Neither tab navigation nor hardware mode changes replay or overwrite the other bank's values. The mapping follows the [main manual's Hidden Options diagram](https://www.chasebliss.com/s/MOOD-MKII_Manual_Pedal_Chase-Bliss.pdf):
 
 | Position | Normal | Hidden |
 |---|---|---|
@@ -94,35 +96,35 @@ The manual overlaps CLOCK value 16 between 3k/4k; the display assigns 16 to 4k, 
 
 CC31: 0/1 = Loop → Wet, 2 = no sync, >2 = Wet → Loop. CC106 is **overdub**, not loop freeze. CC0 is the manual's 7-bit pitch bend control, not a standard 14-bit Pitch Bend message.
 
-MIDI clock following/divisions can be configured; a DAW/controller must supply the clock externally. No browser clock generator or MIDI-input forwarding is included. Synth mode requires an existing sound in the pedal; the browser does not generate audio. Active notes are released on key release/cancel, tab changes, window blur and MIDI output/channel changes, using the original output and channel. Clock changes, Synth exit, preset recall and resets first release active notes. Failed Note Off sends remain pending for retry through **Parar notas ativas**; preset/reset/Clock commands are blocked until those releases succeed. Successful Note Off sends appear in the monitor.
+MIDI clock following/divisions can be configured; a DAW/controller must supply the clock externally. No browser clock generator or MIDI-input forwarding is included. Synth mode requires an existing sound in the pedal; the browser does not generate audio. Active notes are released on key release/cancel, tab changes, window blur and MIDI output/channel changes, using the original output and channel. Clock changes, Synth exit, preset recall and resets first release active notes. Failed Note Off sends remain pending for retry through **Stop active notes**; preset/reset/Clock commands are blocked until those releases succeed. Successful Note Off sends appear in the monitor.
 
 Preset slots 1/2 match the right/left physical toggle. Saving overwrites hardware presets. Destructive commands require confirmation. Save confirmation identifies and captures the exact slot, and confirmation is rejected if the destination changes.
 
 ### Preset library and performance setlist
 
-On Chase Bliss controllers, **Presets** opens all 122 hardware slots, with search (slot/name/notes), favorites and twelve tiles per page. Choosing a tile prepares that slot for editing; **Carregar preset** sends one Program Change. **Live** sends PC0. **Guardar no pedal** sends the documented CC111 with the chosen slot, after overwrite confirmation; it saves the pedal's current settings, not a snapshot of the interface.
+On Chase Bliss controllers, **Presets** opens all 122 hardware slots, with search (slot/name/notes), favorites and twelve tiles per page. Choosing a tile prepares that slot for editing; **Load preset** sends one Program Change. **Live** sends PC0. **Save to pedal** sends the documented CC111 with the chosen slot, after overwrite confirmation; it saves the pedal's current settings, not a snapshot of the interface.
 
-Names, performance notes and favorites are stored in `localStorage`, separately for each model. **Guardar nome e notas** updates only this organization and sends no MIDI. **Importar / Exportar** exchange versioned JSON for that same model; an import replaces local organization only after confirmation. Wrong-model, invalid or oversized files are rejected without changing the existing library. Storage failures are shown explicitly.
+Names, performance notes and favorites are stored in `localStorage`, separately for each model. **Save name and notes** updates only this organization and sends no MIDI. **Import / Export** exchange versioned JSON for that same model; an import replaces local organization only after confirmation. Wrong-model, invalid or oversized files are rejected without changing the existing library. Storage failures are shown explicitly.
 
-Add slots to the ordered **Lista de atuação**, including repeats, then move or remove entries as needed. **Anterior / Seguinte** follow this list without wrapping at its ends; without a list, they step through slots 1–122. The quick bar remains available outside the Presets tab. Clicking a list entry loads it immediately. Failed sends leave the current entry unchanged; active notes are released before any Program Change. The last successfully sent preset and setlist position are isolated by output/channel and demo context.
+Add slots to the ordered **Setlist**, including repeats, then move or remove entries as needed. **Previous / Next** follow this list without wrapping at its ends; without a list, they step through slots 1–122. The quick bar remains available outside the Presets tab. Clicking a list entry loads it immediately. Failed sends leave the current entry unchanged; active notes are released before any Program Change. The last successfully sent preset and setlist position are isolated by output/channel and demo context.
 
 The library contains slot metadata, not downloaded hardware settings or snapshots. Local names do not rename sounds inside the pedal; clear browser data removes the organization, so export before moving browsers or devices. The manuals also document saving with PC while physically holding both footswitches, but the website uses the dedicated save CC instead.
 
 ### Contextual help
 
-Mode descriptions and control help are original Portuguese summaries of the main manuals, with timing, secondary functions and performance suggestions. Hover a control, focus it with the keyboard, or tap **?** for a small popup; Escape dismisses it. Help follows selected modes, RADIO stations and Classic settings. Lost + Found toggle labels track L/R swaps; Generation Loss's AUX view reflects the Classic FREEZE combination.
+Mode descriptions and control help are original English summaries grounded in the main manuals. Hover a control continuously for three seconds, focus it with the keyboard, or tap **?** for a small popup; Escape dismisses it. Help follows selected modes, RADIO stations and Classic settings. Lost + Found toggle labels track L/R swaps; Generation Loss's AUX view reflects the Classic FREEZE combination.
 
 ### Other pedal-specific behavior
 
 - **Lost + Found:** TIME/MODIFY on each side; centre MIX/BLEND. Hidden maps to ALT L/R, SPILL, EQ L/R, GLUE and SPREAD destination. CC25 is a continuous SPILL parameter, not a waveform. Three effect families per side contain A/B algorithms selected with MODIFY; the A/B buttons send 0/127 and Neutral sends 64. L SWAP/R SWAP replace a channel's effect families with those of the opposite side, exposing all twelve algorithms. BANK changes the physical preset selector's right/left targets to 3/4 (not the effect algorithms). MIDI PC slots remain 0–122. Random L/R/both commands mark values non-synchronized rather than inventing their resulting settings. Tap subdivisions include thirteen documented choices.
-- **Generation Loss MKII:** independent ALT values including AUX onset, ramp speed, bypass type, noise levels and input gain. **CC104 is inverted: 0 enters ALT; 1 exits.** The UI's ON/OFF indicates whether ALT is active, not whether the byte is nonzero. Toggle CC21/22/23 and input gain use 1/2/3. The model menu sends the thirteen exact documented CC16 points; intermediate knob values display a percentage rather than assigning undocumented model boundaries, with exact values available via **Valores MIDI**. CLASSIC (CC72) relabels MODEL/LP, SATURATE/GEN, FAILURE/HP, retains their CC values and disables the model menu. FREEZE is available via Classic + AUX FAIL + DROP BYP/SNAG BYP. DSP bypass uses documented representative values 0/127; the unspecified boundary 64 is not emitted by that selector. No Synth, MIDI clock controls, tap tempo or factory reset are invented.
+- **Generation Loss MKII:** independent ALT values including AUX onset, ramp speed, bypass type, noise levels and input gain. **CC104 is inverted: 0 enters ALT; 1 exits.** The UI's ON/OFF indicates whether ALT is active, not whether the byte is nonzero. Toggle CC21/22/23 and input gain use 1/2/3. The model menu sends the thirteen exact documented CC16 points; intermediate knob values show a continuous position rather than assigning undocumented model boundaries, with exact values available via **MIDI values**. CLASSIC (CC72) relabels MODEL/LP, SATURATE/GEN, FAILURE/HP, retains their CC values and disables the model menu. FREEZE is available via Classic + AUX FAIL + DROP BYP/SNAG BYP. DSP bypass uses documented representative values 0/127; the unspecified boundary 64 is not emitted by that selector. No Synth, MIDI clock controls, tap tempo or factory reset are invented.
 - **BAD MOOD Ink:** SOUP/RELAY/FLIP and BURST/RADIO/MASK mode cards; Hidden CROSS/BALANCE/FADE/EQ/GLUE/BLEND, master volume and CROSS input. CC25 is continuous BALANCE and CC33 chooses CROSS source, not the MOOD waveform/buffer controls. The RADIO menu sends the five official station points; raw scan values remain available. FLIP exposes all 48 official CC17 chord intervals as numbered choices, with exact boundary labels, without guessing their voicings. Its clock divisions include nine choices distinct from MOOD's. Synth controls, EQ destination and its own DIP map are included.
 
 ### Navigation and safety
 
 Routes use `controller.html?pedal=...` for Chase Bliss and `instrument.html?instrument=...` for the new models; category pages use `?section=pedals` / `?section=synths`. Bookmarks and browser back/forward work on static GitHub Pages without server rewrites. Unknown model identifiers show an explicit error and no controller.
 
-No model is detected automatically. Opening a page or choosing another pedal requests no MIDI permission and sends no values. Each newly opened controller starts with its own UI values and requires output/channel selection; values are not migrated between pedal models. Back/forward may restore a previous page's last UI state through the browser's page cache; this is still not telemetry. Normal/Hidden view navigation never replays a bank. Leaving via **Pedais** releases active notes on their original destination and blocks the navigation if Note Off fails; browser unload also attempts release and requests confirmation on failure.
+No model is detected automatically. Opening a page or choosing another pedal requests no MIDI permission and sends no values. Each newly opened controller starts with its own UI values and requires output/channel selection; values are not migrated between pedal models. Back/forward may restore a previous page's last UI state through the browser's page cache; this is still not telemetry. Normal/Hidden view navigation never replays a bank. Leaving via **Pedals** releases active notes on their original destination and blocks the navigation if Note Off fails; browser unload also attempts release and requests confirmation on failure.
 
 MIDI tests use mocked outputs only. Real pedal reception, firmware behavior and physical appearance have not been verified on hardware.
 

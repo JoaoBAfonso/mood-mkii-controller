@@ -111,12 +111,12 @@ test('preset confirmation identifies and retains the slot; cancel sends nothing'
   await page.locator('#cc-111').click();
   await expect(page.locator('#confirm-text')).toContainText('Slot 122');
   await page.evaluate(() => { document.getElementById('preset-slot').value = '1'; });
-  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
   expect(await messages(page)).toEqual([[177, 111, 122]]);
   await clearMessages(page);
   await page.locator('#tab-settings').click();
   await page.locator('#cc-56').click();
-  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   expect(await messages(page)).toEqual([]);
 });
 
@@ -127,20 +127,20 @@ test('pending confirmation cannot migrate to a different MIDI target', async ({ 
     const select = document.getElementById('channel');
     select.value = '3'; select.dispatchEvent(new Event('change'));
   });
-  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
   expect(await messages(page)).toEqual([]);
-  await expect(page.locator('#notification')).toContainText('Destino MIDI alterado');
+  await expect(page.locator('#notification')).toContainText('MIDI destination changed');
 });
 
 test('Note Off failures remain retryable and block preset/reset/Clock operations', async ({ page }) => {
   await page.locator('#tab-synth').click();
-  const key = page.getByRole('button', { name: 'Nota C4', exact: true });
+  const key = page.getByRole('button', { name: 'Note C4', exact: true });
   await key.focus();
   await page.keyboard.down('Space');
   await page.evaluate(() => { window.failNoteOff = true; });
   await page.keyboard.up('Space');
   await expect(key).toHaveClass(/playing/);
-  await expect(page.locator('#notification')).toContainText('Não foi possível parar');
+  await expect(page.locator('#notification')).toContainText('Could not stop');
   await page.locator('#pedal-cc-18').fill('120');
   expect(await messages(page)).toEqual([[145, 60, 100]]);
   await expect(page.locator('#pedal-cc-18')).toHaveValue('64');
@@ -148,7 +148,7 @@ test('Note Off failures remain retryable and block preset/reset/Clock operations
   expect(await messages(page)).toEqual([[145, 60, 100]]);
   await page.locator('#tab-settings').click();
   await page.locator('#cc-110').click();
-  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
   expect(await messages(page)).toEqual([[145, 60, 100]]);
   await page.evaluate(() => { window.failNoteOff = false; });
   await page.locator('#tab-synth').click();
@@ -160,7 +160,7 @@ test('Note Off failures remain retryable and block preset/reset/Clock operations
 
 test('notes release on their original channel and Clock exits with Note Off first', async ({ page }) => {
   await page.locator('#tab-synth').click();
-  const key = page.getByRole('button', { name: 'Nota C4', exact: true });
+  const key = page.getByRole('button', { name: 'Note C4', exact: true });
   await key.focus();
   await page.keyboard.down('Space');
   await page.locator('#channel').selectOption('3');
@@ -176,7 +176,7 @@ test('notes release on their original channel and Clock exits with Note Off firs
 
 test('numeric invalid input is rejected and all CCs remain reachable without duplicate IDs', async ({ page }) => {
   await page.locator('#technical-values').check();
-  const numeric = page.getByRole('spinbutton', { name: 'TIME valor CC', exact: true });
+  const numeric = page.getByRole('spinbutton', { name: 'TIME MIDI value', exact: true });
   await numeric.fill('128'); await numeric.press('Tab');
   await expect(numeric).toHaveValue('64');
   expect(await messages(page)).toEqual([]);
@@ -220,7 +220,7 @@ test('knob dragging uses the active bank and repeated Hidden changes do not dupl
 test('disconnect retains failed notes and reconnect releases on the original target', async ({ page }) => {
   await page.locator('#pedal-cc-14').fill('30');
   await page.locator('#tab-synth').click();
-  const key = page.getByRole('button', { name: 'Nota C4', exact: true });
+  const key = page.getByRole('button', { name: 'Note C4', exact: true });
   await key.focus();
   await page.keyboard.down('Space');
   await page.evaluate(() => {
@@ -228,7 +228,7 @@ test('disconnect retains failed notes and reconnect releases on the original tar
     window.midiAccess.onstatechange();
   });
   await expect(page.locator('#output')).toHaveValue('');
-  await expect(page.locator('#notification')).toContainText('Não foi possível parar a nota 60');
+  await expect(page.locator('#notification')).toContainText('Could not stop note 60');
   await page.keyboard.up('Space');
   await clearMessages(page);
   await page.evaluate(() => {
@@ -282,25 +282,25 @@ test('keyboard tab navigation changes the bank too, and other panels retain the 
 test('mode diagrams select exact CC values, mirror toggles and update routing and descriptions', async ({ page }) => {
   for (const [name, cc, value] of [['REVERB', 21, 0], ['DELAY', 21, 2], ['SLIP', 21, 3], ['ENV', 23, 0], ['TAPE', 23, 2], ['STRETCH', 23, 3]]) {
     await clearMessages(page);
-    await page.getByRole('button', { name: `Selecionar ${name}`, exact: true }).click();
+    await page.getByRole('button', { name: `Select ${name}`, exact: true }).click();
     expect(await messages(page)).toEqual([[177, cc, value]]);
     await expect(page.locator(`#pedal-cc-${cc}`)).toHaveValue(String(value));
-    await expect(page.getByRole('button', { name: `Selecionar ${name}`, exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('button', { name: `Select ${name}`, exact: true })).toHaveAttribute('aria-pressed', 'true');
   }
   await page.locator('#pedal-cc-21').selectOption('2');
-  await expect(page.getByRole('button', { name: 'Selecionar DELAY', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Select DELAY', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#mode-description-21')).toContainText('feedback');
   await expect(page.locator('#signal-flow')).toContainText('WET (DELAY)');
   await expect(page.locator('#signal-flow')).toContainText('LOOP (STRETCH)');
   await page.evaluate(() => { window.failAll = true; });
-  await page.getByRole('button', { name: 'Selecionar SLIP', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Selecionar DELAY', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Select SLIP', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Select DELAY', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('ramping diagram follows its full CC range and font is loaded locally', async ({ page }) => {
   await page.locator('#tab-hidden').click();
   await page.locator('#pedal-cc-25').fill('60');
-  await expect(page.locator('#ramp-wave-name')).toHaveText('Ramping · Senoidal');
+  await expect(page.locator('#ramp-wave-name')).toHaveText('Ramping · Sine');
   await expect(page.locator('#ramp-wave')).toHaveAttribute('d', /Q/);
   await page.locator('#cc-25').selectOption('127');
   await expect(page.locator('#ramp-wave-name')).toHaveText('Ramping · Random');

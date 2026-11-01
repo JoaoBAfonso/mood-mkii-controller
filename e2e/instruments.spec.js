@@ -10,22 +10,22 @@ const open = async (page, instrument) => {
 };
 test('root hub separates ten pedals and four synths and all routes send nothing on entry', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('navigation', { name: 'Escolher categoria' }).getByRole('link')).toHaveCount(2);
+  await expect(page.getByRole('navigation', { name: 'Choose a category' }).getByRole('link')).toHaveCount(2);
   await expect(page.locator('#pedal-library')).toBeHidden();
-  await page.getByRole('link', { name: /Abrir pedais/ }).click();
+  await page.getByRole('link', { name: /Open pedals/ }).click();
   await expect(page.locator('.pedal-choice')).toHaveCount(10);
   await page.locator('#category-return').click();
-  await page.getByRole('link', { name: /Abrir sintetizadores/ }).click();
+  await page.getByRole('link', { name: /Open synthesizers/ }).click();
   await expect(page.locator('.pedal-choice')).toHaveCount(4);
   for (const instrument of instruments.filter((item) => item.category === 'synths')) {
-    await page.getByRole('link', { name: `Controlar ${instrument.name}`, exact: true }).click();
+    await page.getByRole('link', { name: `Control ${instrument.name}`, exact: true }).click();
     await expect(page.locator('body')).toHaveAttribute('data-instrument', instrument.id);
     expect(await messages(page)).toEqual([]);
     await page.locator('#back-instruments').click();
     await expect(page).toHaveURL(/section=synths$/);
   }
   await page.goto('/instrument.html?instrument=unknown');
-  await expect(page.locator('main')).toContainText('Instrumento desconhecido');
+  await expect(page.locator('main')).toContainText('Unknown instrument');
   expect(await messages(page)).toEqual([]);
 });
 for (const instrument of instruments) {
@@ -81,7 +81,8 @@ for (const instrument of instruments) {
     }
     const physical = instrument.controls.find((control) => control.physical && control.hint);
     if (physical) {
-      await page.locator(`[data-parameter="${physical.id}"].physical-control .control-help`).focus();
+      await page.keyboard.press('Tab');
+      await page.locator(`#physical-controls [data-parameter="${physical.id}"].physical-control .control-help`).focus();
       await expect(page.locator('#control-tooltip')).toContainText(physical.hint);
       await page.keyboard.press('Escape');
       await expect(page.locator('#control-tooltip')).toBeHidden();
@@ -103,7 +104,7 @@ for (const instrument of instruments) {
     await page.locator('#preset-slot').fill(String(instrument.presets.count + 1));
     await clearMessages(page); await page.locator('#recall-preset').click();
     expect(await messages(page)).toEqual([]);
-    await expect(page.locator('#notification')).toContainText('Escolhe um slot');
+    await expect(page.locator('#notification')).toContainText('Choose a whole-number slot');
   });
 }
 test('new keyboard notes release on original destination; failed Note Off blocks channel and preset changes', async ({ page }) => {
@@ -128,7 +129,7 @@ test('physical knob drag sends only its parameter and numeric inputs reject non-
   const instrument = instruments.find((item) => item.controls.some((control) => control.kind === 'range' && control.physical));
   await open(page, instrument);
   const control = instrument.controls.find((item) => item.kind === 'range' && item.physical);
-  const root = page.locator(`.physical-control[data-parameter="${control.id}"]`);
+  const root = page.locator(`#physical-controls .physical-control[data-parameter="${control.id}"]`);
   await root.locator('.knob').scrollIntoViewIfNeeded();
   const box = await root.locator('.knob').boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -138,7 +139,7 @@ test('physical knob drag sends only its parameter and numeric inputs reject non-
   await clearMessages(page);
   await root.locator('input[type=number]').fill('1.5'); await root.locator('input[type=number]').press('Tab');
   expect(await messages(page)).toEqual([]);
-  await expect(page.locator('#notification')).toContainText('inteiro');
+  await expect(page.locator('#notification')).toContainText('whole number');
 });
 test('documented synth transport and pitch bend send standard messages, recentering on original channel', async ({ page }) => {
   const transport = instruments.find((instrument) => instrument.transport?.start && instrument.transport?.stop);
@@ -185,10 +186,10 @@ test('Empress save selectors are protected and confirmation retains the exact sl
   await page.locator(`[id="${control.id}"]`).selectOption(String(value));
   await expect(page.locator('#confirm-dialog')).toBeVisible();
   expect(await messages(page)).toEqual([]);
-  await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   expect(await messages(page)).toEqual([]);
   await page.locator(`[id="${control.id}"]`).selectOption(String(value));
-  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
   expect(await messages(page)).toEqual([controlMessages(instrument.defaultChannel, control, value).flat()]);
 });
 test('DeepMind effect algorithm changes invalidate only affected slot values, not the entire instrument', async ({ page }) => {

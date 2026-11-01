@@ -14,6 +14,18 @@ test('four model-specific surfaces have valid complete descriptors and safe wire
     assert.match(s.manualUrl, /^https:\/\//);
     assert.match(s.mainManualUrl, /^https:\/\//);
     assert.ok(s.connection && s.limitations.length && s.controls.some((c) => c.physical));
+    assert.ok(s.panelTitle && s.panelOrder.length);
+    assert.equal(new Set(s.panelOrder).size, s.panelOrder.length);
+    for (const section of s.panelOrder) {
+      assert.ok(s.controls.some((c) => c.section === section && c.physical), `${s.id}: ${section}`);
+    }
+    const visibleText = [
+      s.name, s.brand, s.edition || '', s.subtitle, s.panelTitle, s.connection, ...s.panelOrder, ...s.limitations,
+      ...(s.notes && s.notes.pads ? s.notes.pads.map((pad) => pad.name) : []),
+      ...s.controls.flatMap((c) => [c.name, c.section, c.hint, c.optionsHint || '', ...(c.choices || []).map((o) => o.label)]),
+    ].join(' ');
+    assert.doesNotMatch(visibleText, /[ãõáéíóúâêôç]/i);
+    assert.doesNotMatch(visibleText, /\b(?:modo|velocidade|osciladores?|expressão|ataque|decaimento|passos|fábrica|utilizador|categoria|programa|resistência|número|banco|ganho|padrão|seleção|ligado|desligado)\b/i);
     assert.ok(Number.isInteger(s.defaultChannel) && s.defaultChannel >= 1 && s.defaultChannel <= 16);
     for (const key of ['surface', 'ink', 'accent', 'knob']) assert.match(s.appearance[key], /^#[a-f\d]{6}$/i);
     assert.ok(['keyboard', 'drum', 'wide'].includes(s.appearance.layout));
@@ -21,11 +33,25 @@ test('four model-specific surfaces have valid complete descriptors and safe wire
     assert.equal(new Set(s.controls.map((c) => `${c.protocol}-${c.number}`)).size, s.controls.length);
     for (const c of s.controls) {
       assert.ok(c.name && c.section && c.hint, c.id);
+      assert.doesNotMatch([c.name, c.section, c.hint, c.optionsHint || '', ...(c.choices || []).map((o) => o.label)].join(' '), /[ãõáéíóúâêôç]/i, c.id);
+      if (c.endpoints) {
+        assert.equal(c.kind, 'range', c.id);
+        assert.equal(c.endpoints.length, 2, c.id);
+        assert.ok(c.endpoints.every((label) => typeof label === 'string' && label.length), c.id);
+        assert.ok(c.optionsHint, c.id);
+        if (/\d+%/.test(c.optionsHint)) {
+          assert.equal(c.optionsHint, 'Documented mapping: 0 = 50%; 25 = 75%.', c.id);
+        }
+      }
+      if (c.optionsHint) assert.equal(typeof c.optionsHint, 'string', c.id);
+      if (c.visual) assert.ok(['fader', 'encoder', 'touch'].includes(c.visual), c.id);
       assert.ok(Number.isInteger(c.number) && c.number >= 0 && c.number <= (c.protocol === 'nrpn' ? 16383 : 127));
       assert.ok(Number.isInteger(c.min) && Number.isInteger(c.max) && c.min <= c.max, c.id);
       assert.equal(typeof c.physical, 'boolean');
       if (c.kind !== 'action') assert.ok(Number.isInteger(c.initial) && c.initial >= c.min && c.initial <= c.max, c.id);
       if (c.kind === 'select') {
+        assert.equal(c.endpoints, undefined, c.id);
+        assert.equal(c.optionsHint, undefined, c.id);
         assert.ok(c.choices.some((o) => o.value === c.initial), c.id);
         assert.equal(new Set(c.choices.map((o) => o.value)).size, c.choices.length);
         for (const o of c.choices) assert.ok(Number.isInteger(o.value) && o.value >= c.min && o.value <= c.max && o.label);
@@ -48,6 +74,28 @@ test('four model-specific surfaces have valid complete descriptors and safe wire
       assert.throws(() => controlMessages(1, c, c.max + 1), RangeError);
       assert.throws(() => controlMessages(1, c, c.min - 1), RangeError);
     }
+  }
+});
+
+test('descriptive range endpoints and verified categorical choices remain distinct', () => {
+  assert.deepEqual(parameter('microfreak', 'cc', 2).endpoints, ['Less', 'More']);
+  assert.deepEqual(parameter('microfreak', 'cc', 23).endpoints, ['Lower', 'Higher']);
+  assert.deepEqual(parameter('tr-8s', 'cc', 17).endpoints, ['Shorter', 'Longer']);
+  assert.deepEqual(parameter('deepmind-12', 'nrpn', 157).optionsHint, 'Documented range: 20–275 BPM in 1 BPM steps.');
+  assert.equal(parameter('deepmind-12', 'nrpn', 120).optionsHint, 'Documented mapping: 0 = 50%; 25 = 75%.');
+
+  const engine = parameter('pro-vs-mini', 'cc', 9);
+  assert.equal(engine.kind, 'select');
+  assert.deepEqual(engine.choices, [
+    { value: 0, label: 'Chorus' }, { value: 43, label: 'Ensemble' }, { value: 85, label: 'Reverb' },
+  ]);
+  assert.match(engine.hint, /0–42 Chorus, 43–84 Ensemble, 85–127 Reverb/);
+
+  for (const [id, number] of [['microfreak', 9], ['microfreak', 92], ['pro-vs-mini', 54], ['pro-vs-mini', 55]]) {
+    const raw = parameter(id, 'cc', number);
+    assert.equal(raw.kind, 'range', raw.id);
+    assert.match(raw.name, /MIDI Value/);
+    assert.equal(raw.choices, undefined);
   }
 });
 
@@ -82,16 +130,16 @@ test('DeepMind matrix, sequence, FX and text parameter families have exact exten
     assert.equal(parameter('deepmind-12', 'nrpn', 93 + bus * 3).max, 22);
     const destinations = parameter('deepmind-12', 'nrpn', 94 + bus * 3).choices;
     assert.equal(destinations.length, 130);
-    assert.equal(destinations[78].label, 'FX 1 · parâmetro 1');
-    assert.equal(destinations[125].label, 'FX 4 · parâmetro 12');
-    assert.equal(destinations[129].label, 'Nível FX 4');
+    assert.equal(destinations[78].label, 'FX 1 · Parameter 1');
+    assert.equal(destinations[125].label, 'FX 4 · Parameter 12');
+    assert.equal(destinations[129].label, 'FX 4 Level');
     assert.equal(parameter('deepmind-12', 'nrpn', 95 + bus * 3).max, 255);
   }
   for (let n = 123; n <= 154; n++) assert.equal(parameter('deepmind-12', 'nrpn', n).max, 255);
   assert.equal(parameter('deepmind-12', 'nrpn', 118).choices.length, 16);
   assert.equal(parameter('deepmind-12', 'nrpn', 158).choices.length, 13);
-  assert.equal(parameter('deepmind-12', 'nrpn', 119).choices[31].label, '32 passos');
-  assert.equal(parameter('deepmind-12', 'nrpn', 162).choices[64].label, 'Utilizador 32');
+  assert.equal(parameter('deepmind-12', 'nrpn', 119).choices[31].label, '32 Steps');
+  assert.equal(parameter('deepmind-12', 'nrpn', 162).choices[64].label, 'User 32');
   assert.equal(parameter('deepmind-12', 'nrpn', 165).choices.length, 10);
   for (let slot = 0; slot < 4; slot++) {
     const start = 166 + slot * 13;
@@ -101,7 +149,7 @@ test('DeepMind matrix, sequence, FX and text parameter families have exact exten
   }
   for (let n = 223; n <= 239; n++) {
     assert.equal(parameter('deepmind-12', 'nrpn', n).max, 127);
-    assert.equal(parameter('deepmind-12', 'nrpn', n).choices[0].label, 'Terminar nome');
+    assert.equal(parameter('deepmind-12', 'nrpn', n).choices[0].label, 'End Name');
   }
   assert.equal(parameter('deepmind-12', 'nrpn', 240).max, 16);
   assert.deepEqual(synth('deepmind-12').presets, { count: 128, offset: 0 });
@@ -113,6 +161,7 @@ test('MicroFreak appendix D exposes all 21 CCs without speculative NRPN or oscil
   assert.equal(parameter('microfreak', 'cc', 9).kind, 'range');
   assert.equal(parameter('microfreak', 'cc', 92).kind, 'range');
   assert.equal(parameter('microfreak', 'cc', 64).onValue, 127);
+  assert.equal(parameter('microfreak', 'cc', 2).visual, 'touch');
   assert.equal(synth('microfreak').transport, undefined);
 });
 
@@ -124,7 +173,10 @@ test('TR-8S receive chart covers precisely 53 CCs, excluding transmit-only fill 
   assert.equal(synth('tr-8s').pitchBend, undefined);
   assert.equal(synth('tr-8s').defaultChannel, 10);
   assert.deepEqual(synth('tr-8s').transport, { start: true, stop: true, continue: true });
-  for (const n of [19,96,97,102,103,104,105,106,107,108,109,110]) assert.match(parameter('tr-8s', 'cc', n).hint, /atribui/);
+  for (const n of [19,96,97,102,103,104,105,106,107,108,109,110]) assert.match(parameter('tr-8s', 'cc', n).hint, /assignment/);
+  assert.deepEqual(synth('tr-8s').controls.filter((c) => c.visual === 'fader').map((c) => c.id).sort(), [
+    'cc-24', 'cc-29', 'cc-48', 'cc-51', 'cc-54', 'cc-57', 'cc-60', 'cc-63', 'cc-82', 'cc-85', 'cc-88',
+  ]);
   assert.deepEqual(presetMessages(10, 1, synth('tr-8s').presets), [[0xc9, 0]]);
   assert.deepEqual(presetMessages(10, 128, synth('tr-8s').presets), [[0xc9, 127]]);
 });
@@ -135,7 +187,7 @@ test('TR-8S default main/ALT note pairs match official chart and remain configur
     assert.deepEqual(noteMessage(10, note, 100), [0x99, note, 100]);
     assert.deepEqual(noteMessage(10, note, 0, false), [0x89, note, 0]);
   }
-  assert.match(synth('tr-8s').connection, /reatribuíveis/);
+  assert.match(synth('tr-8s').connection, /can be changed/);
   assert.ok(!synth('tr-8s').notes.pads.some((p) => p.name.includes('TRIGGER')));
 });
 
@@ -147,12 +199,13 @@ test('PRO-VS v2 chart includes all 34 real CCs with exact effective ranges', () 
   }
   assert.deepEqual(parameter('pro-vs-mini', 'cc', 9).choices.map((o) => o.value), [0,43,85]);
   assert.equal(parameter('pro-vs-mini', 'cc', 118).physical, false);
-  assert.match(parameter('pro-vs-mini', 'cc', 118).hint, /repete/);
+  assert.match(parameter('pro-vs-mini', 'cc', 118).hint, /repeats/);
   assert.equal(parameter('pro-vs-mini', 'cc', 54).kind, 'range');
   assert.equal(synth('pro-vs-mini').transport, undefined);
   assert.equal(synth('pro-vs-mini').presets, undefined);
   assert.equal(parameter('pro-vs-mini', 'cc', 16), undefined); // no guessed joystick
   assert.equal(parameter('pro-vs-mini', 'cc', 7), undefined); // no guessed master volume
+  assert.ok(!synth('pro-vs-mini').controls.some((c) => c.xy));
 });
 
 test('verified DeepMind and MicroFreak PC recall is bounded to the current bank without guessed selectors', () => {
@@ -165,7 +218,7 @@ test('verified DeepMind and MicroFreak PC recall is bounded to the current bank 
       assert.deepEqual(presetMessages(ch, 128, s.presets), [[0xc0 + ch - 1, 127]]);
       assert.throws(() => presetMessages(ch, 129, s.presets), RangeError);
     }
-    assert.ok(s.limitations.some((text) => text.includes('banco atual')));
+    assert.ok(s.limitations.some((text) => text.includes('current bank')));
   }
   assert.equal(synth('microfreak').pitchBend, true);
   assert.equal(synth('microfreak').transport, undefined);

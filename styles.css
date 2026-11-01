@@ -349,5 +349,13 @@ body:not(.technical-view) .control input[type=number]{display:none}
 #setlist-empty{font-size:12px;color:var(--muted);line-height:1.6}
 .tabs button{padding-inline:8px}
 button:disabled{cursor:default}
+.control-bounds{display:flex;justify-content:space-between;gap:10px;font-size:9px;color:inherit;opacity:.8;margin-top:5px;line-height:1.4;text-align:left}
+.control-bounds span:last-child{text-align:right}.control-possibilities{font-size:10px;line-height:1.5;margin:6px 0 0;opacity:.8}
+.control-bounds span{min-width:0;overflow-wrap:anywhere;flex:1}
+.pedal-control-deck{border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:24px;background:var(--surface)}
+.pedal-control-deck>label{display:grid;gap:8px;font-size:11px}.pedal-control-deck>label select{width:100%}
+.pedal-control-deck .mode-section{margin:18px 0}.face-bank-buttons{display:flex;gap:8px}.face-bank-buttons button{flex:1;font-size:12px}
+#face-controls>.control{margin-top:12px}
+.face-bank-buttons button[aria-pressed=true]{background:var(--lavender);border-color:var(--accent)}
 @media(max-width:760px){.manual-links{gap:12px}.preset-quick{flex-direction:column;align-items:stretch;gap:10px}.quick-preset-actions{flex-wrap:wrap}.quick-preset-actions button{flex:1}.current-preset{grid-template-columns:1fr auto}.current-preset>span{grid-column:1/-1}.preset-quick{margin-bottom:22px}.tabs{justify-content:start}.tabs button{padding-inline:8px;font-size:12px}}
 @media(max-width:380px){.preset-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.library-filters{gap:8px}.tabs button{padding-inline:6px}.manual-links{gap:9px}.manual-link{font-size:9px}.quick-preset-actions button{font-size:11px;padding-inline:8px}}

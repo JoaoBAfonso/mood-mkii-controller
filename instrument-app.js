@@ -1,15 +1,16 @@
-import { getInstrument } from './instruments.js?v=3.0.0';
-import { controlMessages, presetMessages, noteMessage, pitchBendMessage, sendMessage } from './midi.js?v=3.0.0';
-import { createPresetManager } from './presets.js?v=3.0.0';
-import { createHelpTooltip } from './tooltip.js?v=3.0.0';
+import { getInstrument } from './instruments.js?v=3.1.0';
+import { controlMessages, presetMessages, noteMessage, pitchBendMessage, sendMessage } from './midi.js?v=3.1.0';
+import { createPresetManager } from './presets.js?v=3.1.0';
+import { createHelpTooltip } from './tooltip.js?v=3.1.0';
 
 const $ = (id) => document.getElementById(id);
+const controlName = (control) => control.name.replace(/\s*·\s*MIDI Value/gi, '');
 const instrument = getInstrument(new URLSearchParams(location.search).get('instrument'));
 if (!instrument) {
   const error = document.createElement('p');
-  error.textContent = 'Instrumento desconhecido. Volta ao hub para escolher um equipamento.';
+  error.textContent = 'Unknown instrument. Return to the hub to choose a device.';
   document.querySelector('main').replaceChildren(error);
-  throw new Error('Instrumento inválido.');
+  throw new Error('Invalid instrument.');
 }
 document.title = `${instrument.name} · MIDI Studio`;
 document.body.dataset.instrument = instrument.id;
@@ -42,7 +43,7 @@ if (drawing) {
 $('instrument-edition').textContent = instrument.edition || 'MIDI STUDIO';
 $('main-manual-link').href = instrument.mainManualUrl;
 $('manual-link').href = instrument.manualUrl;
-$('back-label').textContent = instrument.category === 'synths' ? 'Sintetizadores' : 'Pedais';
+$('back-label').textContent = instrument.category === 'synths' ? 'Synthesizers' : 'Pedals';
 $('back-instruments').href = `./?section=${instrument.category}`;
 $('connection-guide').textContent = instrument.connection;
 for (const description of instrument.limitations || []) {
@@ -72,8 +73,8 @@ contexts.set(targetKey(), context);
 const notify = (message) => { $('notification').textContent = message; $('notification').hidden = !message; };
 function connection() {
   const ready = output()?.state === 'connected';
-  $('connection-status').textContent = demo() ? 'Demonstração' : ready ? 'Saída MIDI pronta' : 'Não ligado';
-  $('connection-detail').textContent = demo() ? 'Explorar em simulação' : ready ? `${output().name || 'Interface MIDI'} · canal ${channel()}` : 'Escolhe a saída e o canal';
+  $('connection-status').textContent = demo() ? 'Demo' : ready ? 'MIDI output ready' : 'Not connected';
+  $('connection-detail').textContent = demo() ? 'Explore without hardware' : ready ? `${output().name || 'MIDI interface'} · channel ${channel()}` : 'Choose an output and channel';
   $('status-dot').classList.toggle('ready', ready && !demo());
   $('status-dot').classList.toggle('demo', demo());
 }
@@ -89,13 +90,15 @@ function transmit(messages, name, destination = { output: output(), demo: demo()
     $('monitor-empty').hidden = true;
     if (![...notes.values()].some((note) => note.pending)) notify('');
     return true;
-  } catch (error) { notify(`Não foi possível enviar: ${error.message}`); return false; }
+  } catch (error) { notify(`Could not send: ${error.message}`); return false; }
 }
 function update(control) {
   const value = context.values[control.id];
   if (eqBars.has(control.id)) {
     const bar = eqBars.get(control.id);
-    bar.style.setProperty('--level', `${(value - control.min) / (control.max - control.min) * 100}%`);
+    const center = control.initial;
+    const gain = (value - center) / Math.max(1, center - control.min, control.max - center);
+    bar.style.setProperty('--gain', String(gain)); bar.classList.toggle('negative', gain < 0);
     bar.classList.toggle('stale', context.stale.has(control.id));
   }
   for (const view of views.get(control.id) || []) {
@@ -103,7 +106,11 @@ function update(control) {
     if (view.input) view.input.value = value;
     if (view.numeric) view.numeric.value = value;
     if (view.knob) view.knob.style.setProperty('--rotation', `${-135 + (value - control.min) / Math.max(1, control.max - control.min) * 270}deg`);
-    if (view.readout) view.readout.textContent = control.label ? control.label(value, context.values) : `${Math.round((value - control.min) / Math.max(1, control.max - control.min) * 100)}%`;
+    if (view.readout) {
+      const label = control.label?.(value, context.values);
+      view.readout.textContent = label || (value === control.min ? control.endpoints?.[0] || 'Minimum' : value === control.max ? control.endpoints?.[1] || 'Maximum' : '');
+      view.input?.setAttribute('aria-valuetext', view.readout.textContent || `Between ${(control.endpoints || ['Minimum', 'Maximum']).join(' and ')}`);
+    }
     if (view.button && control.kind === 'toggle') {
       const on = value === (control.onValue ?? 127);
       view.button.setAttribute('aria-pressed', String(on)); view.button.classList.toggle('active', on);
@@ -138,7 +145,8 @@ function change(control, value, confirmed = false) {
         }
       }
       $('state-note').hidden = !context.stale.size;
-      $('hardware-screen').textContent = `${control.name} · ${control.kind === 'select' ? control.choices.find((choice) => choice.value === value).label : control.label ? control.label(value, context.values) : value}`;
+      const display = control.kind === 'select' ? control.choices.find((choice) => choice.value === value).label : control.label?.(value, context.values);
+      $('hardware-screen').textContent = `${controlName(control)}${display ? ` · ${display}` : ''}`;
       help.refresh();
     } else update(control);
   } catch (error) { notify(error.message); update(control); }
@@ -146,23 +154,23 @@ function change(control, value, confirmed = false) {
 function confirm(message, callback) {
   const key = targetKey();
   help.hide();
-  $('confirm-text').textContent = `${demo() ? 'MODO DEMO: apenas simulação. ' : ''}${message}`;
+  $('confirm-text').textContent = `${demo() ? 'DEMO MODE: simulation only. ' : ''}${message}`;
   $('confirm-dialog').querySelector('form').onsubmit = (event) => {
     event.preventDefault(); const result = event.submitter?.value;
     $('confirm-dialog').close(result);
     if (result !== 'confirm') return;
-    if (key !== targetKey()) { notify('Destino MIDI alterado. Volta a confirmar o comando.'); return; }
+    if (key !== targetKey()) { notify('MIDI destination changed. Confirm the command again.'); return; }
     callback();
   };
   $('confirm-dialog').showModal();
 }
-function makeControl(control, physical = false) {
+function makeControl(control, physical = false, surface = physical ? 'hardware' : '', visual = control.visual) {
   const root = document.createElement('div');
-  root.className = `control ${physical ? 'physical-control' : ''} ${control.kind}`;
+  root.className = `control ${physical ? 'physical-control' : ''} ${control.kind} visual-${visual || 'knob'}`;
   root.dataset.parameter = control.id; root.dataset.protocol = control.protocol; root.dataset.number = control.number;
-  root.dataset.search = `${control.name} ${control.hint || ''}`.toLocaleLowerCase('pt-PT');
-  const id = `${physical ? 'hardware-' : ''}${control.id}`;
-  const label = document.createElement('label'); label.htmlFor = id; label.textContent = control.name.replace(/\s*·\s*valor MIDI/gi, '');
+  root.dataset.search = `${control.name} ${control.hint || ''}`.toLocaleLowerCase('en');
+  const id = `${surface ? `${surface}-` : ''}${control.id}`;
+  const label = document.createElement('label'); label.htmlFor = id; label.textContent = controlName(control);
   root.append(label);
   const view = { root };
   if (control.kind === 'range') {
@@ -171,15 +179,15 @@ function makeControl(control, physical = false) {
     input.oninput = () => change(control, Number(input.value));
     const numeric = document.createElement('input'); numeric.type = 'number';
     numeric.min = control.min; numeric.max = control.max; numeric.step = 1;
-    numeric.setAttribute('aria-label', `${control.name} valor MIDI`);
+    numeric.setAttribute('aria-label', `${controlName(control)} MIDI value`);
     numeric.onchange = () => {
-      if (!numeric.value || !numeric.validity.valid) { notify(`Escolhe um inteiro entre ${control.min} e ${control.max}.`); update(control); return; }
+      if (!numeric.value || !numeric.validity.valid) { notify(`Choose a whole number from ${control.min} to ${control.max}.`); update(control); return; }
       change(control, Number(numeric.value));
     };
     const readout = document.createElement('output'); readout.className = 'readout';
     const row = document.createElement('div'); row.className = 'value-row'; row.append(readout, numeric);
     root.append(input, row); Object.assign(view, { input, numeric, readout });
-    if (physical) {
+    if (physical && visual !== 'fader' && visual !== 'touch') {
       const knob = document.createElement('div'); knob.className = 'knob'; knob.setAttribute('aria-hidden', 'true');
       const mark = document.createElement('span'); mark.className = 'knob-mark'; knob.append(mark);
       knob.onpointerdown = (event) => {
@@ -195,6 +203,16 @@ function makeControl(control, physical = false) {
         knob.addEventListener('pointermove', move); knob.addEventListener('lostpointercapture', stop);
       };
       root.prepend(knob); view.knob = knob;
+    }
+    if (control.kind === 'range') {
+      const bounds = document.createElement('div'); bounds.className = 'control-bounds';
+      for (const text of control.endpoints || ['Minimum', 'Maximum']) {
+        const endpoint = document.createElement('span'); endpoint.textContent = text; bounds.append(endpoint);
+      }
+      root.append(bounds);
+      if (control.optionsHint) {
+        const possibilities = document.createElement('p'); possibilities.className = 'control-possibilities'; possibilities.textContent = control.optionsHint; root.append(possibilities);
+      }
     }
   } else if (control.kind === 'select') {
     const input = document.createElement('select'); input.id = id;
@@ -215,6 +233,26 @@ function makeControl(control, physical = false) {
   return root;
 }
 const sections = [...new Set(instrument.controls.map((control) => control.section))];
+const panelSections = [...(instrument.panelOrder || []).filter((section) => sections.includes(section)), ...sections.filter((section) => !instrument.panelOrder?.includes(section))];
+for (const section of panelSections) $('onboard-section').add(new Option(section, section));
+for (const control of instrument.controls) $('onboard-control').append(makeControl(control, true, 'screen'));
+function onboardSection() {
+  const previous = $('onboard-parameter').value;
+  $('onboard-parameter').replaceChildren();
+  for (const control of instrument.controls.filter((control) => control.section === $('onboard-section').value)) {
+    $('onboard-parameter').add(new Option(controlName(control), control.id));
+  }
+  if ([...$('onboard-parameter').options].some((option) => option.value === previous)) $('onboard-parameter').value = previous;
+  onboardParameter();
+}
+function onboardParameter() {
+  help.hide();
+  const selected = $('onboard-parameter').value;
+  for (const view of $('onboard-control').children) view.hidden = view.dataset.parameter !== selected;
+}
+$('onboard-section').onchange = onboardSection;
+$('onboard-parameter').onchange = onboardParameter;
+onboardSection();
 function activate(button) {
   help.hide();
   if (!release()) return;
@@ -241,10 +279,10 @@ for (const [index, section] of sections.entries()) {
 const eqControls = instrument.controls.filter((control) => control.eqBand);
 if (eqControls.length) {
   const eq = document.createElement('section'); eq.className = 'eq-screen';
-  const channelLabel = document.createElement('label'); channelLabel.textContent = 'Canal EQ';
+  const channelLabel = document.createElement('label'); channelLabel.textContent = 'EQ channel';
   const eqChannel = document.createElement('select'); eqChannel.id = 'eq-channel';
   eqChannel.add(new Option('A', '1')); eqChannel.add(new Option('B', '2')); channelLabel.append(eqChannel);
-  const bandLabel = document.createElement('label'); bandLabel.textContent = 'Banda';
+  const bandLabel = document.createElement('label'); bandLabel.textContent = 'Band';
   const eqBand = document.createElement('select'); eqBand.id = 'eq-band';
   for (let band = 1; band <= 10; band++) eqBand.add(new Option(String(band), String(band)));
   bandLabel.append(eqBand);
@@ -253,12 +291,12 @@ if (eqControls.length) {
   const encoder = document.createElement('div'); encoder.className = 'eq-encoder';
   for (const control of eqControls) {
     const bar = document.createElement('button'); bar.type = 'button'; bar.dataset.parameter = control.id;
-    bar.setAttribute('aria-label', `Selecionar banda ${control.eqBand.band}, canal ${control.eqBand.channel === 1 ? 'A' : 'B'}`);
+    bar.setAttribute('aria-label', `Select band ${control.eqBand.band}, channel ${control.eqBand.channel === 1 ? 'A' : 'B'}`);
     const indicator = document.createElement('i');
     const label = document.createElement('small'); label.textContent = control.eqBand.frequency ? `${control.eqBand.frequency >= 1000 ? `${control.eqBand.frequency / 1000}k` : control.eqBand.frequency}` : String(control.eqBand.band);
     bar.append(indicator, label); bar.onclick = () => { eqBand.value = String(control.eqBand.band); refreshEq(); };
     eqBars.set(control.id, bar); chart.append(bar);
-    encoder.append(makeControl(control, true));
+    encoder.append(makeControl(control, true, 'hardware', 'encoder'));
   }
   refreshEq = () => {
     for (const control of eqControls) {
@@ -272,13 +310,15 @@ if (eqControls.length) {
   eq.append(selectors, chart, encoder); $('physical-controls').append(eq);
   eqControls.forEach(update);
 }
-for (const section of sections) {
+for (const section of panelSections) {
   const controls = instrument.controls.filter((control) => control.section === section && control.physical && !control.eqBand).sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   if (!controls.length) continue;
   const group = document.createElement('section'); group.className = 'hardware-section';
+  group.classList.toggle('large-section', controls.length > 6);
+  if (instrument.appearance.layout === 'drum' && /Rhythm|Input/i.test(section)) group.classList.add('drum-global', controls.length > 4 ? 'global-wide' : 'global-small');
   const heading = document.createElement('h3'); heading.textContent = section; group.append(heading);
   const grid = document.createElement('div'); grid.className = 'hardware-grid';
-  for (const control of controls) grid.append(makeControl(control, true));
+  for (const control of controls) grid.append(makeControl(control, true, 'hardware', instrument.id === 'deepmind-12' && control.kind === 'range' && (/^(attack|decay|sustain|release)$/i.test(control.name) || /^(LPF Cutoff|Resonance)$/i.test(control.name)) ? 'fader' : control.visual));
   group.append(grid); $('physical-controls').append(group);
 }
 if (instrument.presets) {
@@ -293,7 +333,7 @@ if (instrument.presets) {
       if (!release()) return false;
       try {
         const messages = instrument.presetMessages ? instrument.presetMessages(channel(), slot) : presetMessages(channel(), slot, instrument.presets);
-        if (!transmit(messages, slot ? `Carregar preset ${slot}` : 'Live')) return false;
+        if (!transmit(messages, slot ? `Load preset ${slot}` : 'Live')) return false;
         context.preset = String(slot);
         context.stale = new Set(instrument.controls.filter((control) => control.kind !== 'action').map((control) => control.id));
         instrument.controls.forEach(update); $('state-note').hidden = false;
@@ -302,7 +342,7 @@ if (instrument.presets) {
       } catch (error) { notify(error.message); return false; }
     },
   });
-  $('open-presets').onclick = () => { tab.onclick(); tab.focus(); };
+  $('open-presets').onclick = () => { $('parameter-inspector').open = true; tab.onclick(); tab.focus(); };
 }
 $('sections').onkeydown = (event) => {
   const tabs = [...$('sections').querySelectorAll('[role=tab]')];
@@ -316,7 +356,7 @@ $('sections').onkeydown = (event) => {
 };
 function filter() {
   help.hide();
-  const query = $('control-search').value.trim().toLocaleLowerCase('pt-PT');
+  const query = $('control-search').value.trim().toLocaleLowerCase('en');
   let matches = 0;
   for (const panel of $('parameter-panels').children) {
     let count = 0;
@@ -363,7 +403,7 @@ function noteOff(key) {
 if (instrument.notes?.enabled) {
   $('stop-notes').hidden = false;
   const options = document.createElement('div'); options.className = 'note-options';
-  const velocityLabel = document.createElement('label'); velocityLabel.textContent = 'Velocidade';
+  const velocityLabel = document.createElement('label'); velocityLabel.textContent = 'Velocity';
   const velocity = document.createElement('input'); velocity.type = 'range'; velocity.min = 1; velocity.max = 127; velocity.value = 100; velocity.id = 'velocity'; velocityLabel.append(velocity);
   options.append(velocityLabel);
   const noteGrid = document.createElement('div'); noteGrid.className = instrument.notes.pads ? 'drum-pads' : 'instrument-keys';
@@ -377,7 +417,7 @@ if (instrument.notes?.enabled) {
   for (const [index, item] of noteList.entries()) {
     const button = document.createElement('button'); button.type = 'button'; button.textContent = item.name;
     button.dataset.note = item.note;
-    button.setAttribute('aria-label', `Tocar ${item.name}`);
+    button.setAttribute('aria-label', `Play ${item.name}`);
     const black = [1, 3, 6, 8, 10].includes(item.note % 12);
     button.classList.toggle('black-key', !instrument.notes.pads && black);
     if (!instrument.notes.pads) {
@@ -410,7 +450,7 @@ if (instrument.pitchBend) {
   };
   const reset = () => {
     if (!bendDestination) return true;
-    if (!transmit([pitchBendMessage(bendDestination.channel, 8192)], 'Pitch bend · centro', bendDestination)) return false;
+    if (!transmit([pitchBendMessage(bendDestination.channel, 8192)], 'Pitch bend · center', bendDestination)) return false;
     bend.value = 8192; bendDestination = undefined; return true;
   };
   bend.onchange = reset; bend.onblur = reset; bend.onpointercancel = reset; label.append(bend); $('note-controls').append(label);
@@ -429,17 +469,17 @@ $('channel').onchange = () => { if (!release()) { $('channel').value = previousC
 $('demo').onchange = () => { if (!release()) { $('demo').checked = previousDemo; return; } previousDemo = demo(); switchContext(); };
 function ports() {
   const selected = $('output').value;
-  $('output').replaceChildren(new Option('Selecionar saída', ''));
-  for (const port of access.outputs.values()) if (port.state === 'connected') $('output').add(new Option(port.name || 'Interface MIDI', port.id));
-  if (selected && ![...$('output').options].some((option) => option.value === selected)) $('output').add(new Option('Saída desligada', selected));
+  $('output').replaceChildren(new Option('Select output', ''));
+  for (const port of access.outputs.values()) if (port.state === 'connected') $('output').add(new Option(port.name || 'MIDI interface', port.id));
+  if (selected && ![...$('output').options].some((option) => option.value === selected)) $('output').add(new Option('Disconnected output', selected));
   $('output').value = selected; connection(); release();
 }
 $('connect').onclick = async () => {
   try {
-    if (!navigator.requestMIDIAccess) throw new Error('Web MIDI indisponível. Usa Chrome ou Edge com HTTPS.');
+    if (!navigator.requestMIDIAccess) throw new Error('Web MIDI unavailable. Use Chrome or Edge with HTTPS.');
     access = await navigator.requestMIDIAccess({ sysex: false });
     access.onstatechange = ports; ports();
-  } catch (error) { notify(`Não foi possível ligar MIDI: ${error.message}`); }
+  } catch (error) { notify(`Could not connect MIDI: ${error.message}`); }
 };
 $('back-instruments').onclick = (event) => { if (!release()) event.preventDefault(); };
 window.addEventListener('blur', release);

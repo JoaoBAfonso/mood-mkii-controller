@@ -40,7 +40,7 @@ test('SL-2 only exposes three documented CCs, clock transport, no phantom preset
   assert.equal(pedal('boss-sl-2').presets, undefined);
   assert.deepEqual(pedal('boss-sl-2').transport, { start: true, stop: true, continue: true });
   assert.equal(control('boss-sl-2', 80).kind, 'range');
-  assert.match(pedal('boss-sl-2').limitations.join(' '), /não se assume o limiar 64/);
+  assert.match(pedal('boss-sl-2').limitations.join(' '), /no threshold of 64 is assumed/);
 });
 
 test('Deco v2 exact map, one-based switches, clock division and 299 writable slots', () => {
@@ -99,30 +99,30 @@ test('EQ2 factory map covers both channels without assigning undocumented custom
     assert.equal(control(id, number).label(5), 'Q 1.0');
     assert.equal(control(id, number).label(95), 'Q 10.0');
     assert.equal(control(id, number).label(0), 'Q 0.5');
-    assert.equal(control(id, number).label(42), 'Q · MIDI 42');
+    assert.equal(control(id, number).label(42), 'Between documented Q points');
   }
   assert.equal(control(id, 71).max, 28);
   assert.equal(control(id, 73).choices[4].label, 'Cascade');
   assert.equal(control(id, 83).kind, 'action');
-  assert.match(control(id, 83).hint, /qualquer número/);
-  assert.match(pedal(id).limitations.join(' '), /não têm CC de fábrica/);
+  assert.match(control(id, 83).hint, /any number/);
+  assert.match(pedal(id).limitations.join(' '), /have no factory CCs/);
 });
 
 test('Nemesis ADT excludes conflicting legacy engine indices and reserved CC4', () => {
   const id = 'source-audio-nemesis-adt';
   assert.deepEqual(ccNumbers(id), [1,2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,39,40,41,42,50,51,80,82,93,97,101,102,103,104]);
   assert.equal(control(id, 38), undefined);
-  assert.match(pedal(id).limitations.join(' '), /CC38 é um alias/);
+  assert.match(pedal(id).limitations.join(' '), /CC38 is a bypass alias/);
   assert.match(pedal(id).mainManualUrl, /nemesis_adt_user_manual/);
   assert.deepEqual(control(id, 1).choices.map(({ value }) => value), [0,1,2,3,4,6,7,8,11,13,14,15,16,17,18,19,20,21,22]);
   const pitch = control(id, 24);
   assert.equal(pitch.choices.length, 126);
-  assert.equal(pitch.choices[0].label, '31 semitons');
-  assert.equal(pitch.choices[31].label, '0 semitons');
-  assert.equal(pitch.choices[62].label, '-31 semitons');
-  assert.equal(pitch.choices[63].label, 'Reverse · -31 semitons');
-  assert.equal(pitch.choices[94].label, 'Reverse · 0 semitons');
-  assert.equal(pitch.choices[125].label, 'Reverse · 31 semitons');
+  assert.equal(pitch.choices[0].label, '31 semitones');
+  assert.equal(pitch.choices[31].label, '0 semitones');
+  assert.equal(pitch.choices[62].label, '-31 semitones');
+  assert.equal(pitch.choices[63].label, 'Reverse · -31 semitones');
+  assert.equal(pitch.choices[94].label, 'Reverse · 0 semitones');
+  assert.equal(pitch.choices[125].label, 'Reverse · 31 semitones');
   assert.equal(control(id, 35).max, 6);
   assert.equal(control(id, 50).max, 125);
   assert.equal(control(id, 42).choices.length, 15);
@@ -171,4 +171,29 @@ test('CC102 reconciles canonical bypass once for any payload without guessing un
   }
   assert.equal(pedal('strymon-deco-v2').controls.find(({ id }) => id === 'manual-mode').invalidatesState, true);
   assert.equal(control('empress-reverb', 39).invalidatesState, undefined);
+});
+
+test('hardware panels and uncalibrated ranges expose meaningful endpoint metadata', () => {
+  for (const entry of additionalPedals) {
+    assert.ok(entry.panelOrder.length);
+    for (const item of entry.controls) {
+      assert.ok(entry.panelOrder.includes(item.section), `${entry.id}: ${item.section}`);
+      if (item.kind === 'range') {
+        assert.equal(item.endpoints.length, 2);
+        assert.ok(item.endpoints.every((label) => label && !/%|CC\d|MIDI \d/.test(label)));
+        assert.ok(item.optionsHint);
+      }
+    }
+  }
+  assert.deepEqual(control('strymon-deco-v2', 20).endpoints, ['Reference Deck', 'Lag Deck']);
+  assert.deepEqual(control('source-audio-nemesis-adt', 26).endpoints, ['Left', 'Right']);
+  assert.deepEqual(control('source-audio-eq2', 23).endpoints, ['20 Hz', '20 kHz']);
+  assert.deepEqual(control('source-audio-eq2', 43).endpoints, ['Q 0.5', 'Q 10.0']);
+  assert.equal(control('source-audio-eq2', 3).visual, 'fader');
+  assert.equal(control('strymon-mobius', 19).visual, 'encoder');
+  assert.equal(control('strymon-mobius', 80).visual, 'footswitch');
+  assert.equal(control('strymon-deco-v2', 11).visual, 'toggle');
+  assert.deepEqual(pedal('strymon-mobius').controls.filter(({ section }) => section === 'Knobs').map(({ number }) => number), [19,17,18,15,9,16]);
+  assert.deepEqual(pedal('strymon-deco-v2').panelOrder.slice(0, 2), ['Tape Saturation', 'Doubletracker']);
+  assert.deepEqual(ccNumbers('boss-sl-2'), [16,80,81]);
 });
