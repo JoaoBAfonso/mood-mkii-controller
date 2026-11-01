@@ -77,9 +77,9 @@ for (const pedal of pedals.filter((item) => item.id !== 'mood-mkii')) {
         expect(await messages(page)).toEqual([[177, control.cc, 1], [177, control.cc, 0]]);
       }
     }
-    for (const tab of ['performance', 'hidden', 'dips', 'settings', ...(pedal.synth ? ['synth'] : [])]) {
+    for (const tab of ['performance', 'hidden', 'dips', 'presets', 'settings', ...(pedal.synth ? ['synth'] : [])]) {
       await page.locator(`#tab-${tab}`).click();
-      const groups = { performance: ['performance'], hidden: ['hidden'], dips: ['ramping', 'dip-left', 'dip-right'], settings: ['global'], synth: ['synth'] }[tab];
+      const groups = { performance: ['performance'], hidden: ['hidden'], dips: ['ramping', 'dip-left', 'dip-right'], presets: ['presets'], settings: ['global'], synth: ['synth'] }[tab];
       for (const control of pedal.controls.filter((item) => groups.includes(item.group))) {
         const input = page.locator(`#cc-${control.cc}`);
         if (control.kind === 'range') {
@@ -105,7 +105,7 @@ for (const pedal of pedals.filter((item) => item.id !== 'mood-mkii')) {
     await open(page, pedal.id);
     for (const width of [360, 390, 768, 1280]) {
       await page.setViewportSize({ width, height: 900 });
-      for (const tab of ['performance', 'hidden', 'dips', 'settings', ...(pedal.synth ? ['synth'] : [])]) {
+      for (const tab of ['performance', 'hidden', 'dips', 'presets', 'settings', ...(pedal.synth ? ['synth'] : [])]) {
         await page.locator(`#tab-${tab}`).click();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         const box = await page.locator('.pedal').boundingBox();

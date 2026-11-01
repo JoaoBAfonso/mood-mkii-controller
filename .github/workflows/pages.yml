@@ -29,7 +29,7 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir _site
-          cp index.html controller.html styles.css studio.js app.js pedals.js controls.js midi.js icon.svg _site/
+          cp index.html controller.html styles.css studio.js app.js pedals.js controls.js midi.js presets.js help.js tooltip.js icon.svg _site/
           cp -R assets _site/
       - uses: actions/upload-pages-artifact@v3
         with:

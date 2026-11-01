@@ -1,4 +1,4 @@
-import { controls as moodControls, controlValueLabel as moodLabel, hiddenPedalMap, manualUrl, range, select, toggle, action, options, three } from './controls.js?v=2.0.0';
+import { controls as moodControls, controlValueLabel as moodLabel, hiddenPedalMap, manualUrl, range, select, toggle, action, options, three } from './controls.js?v=2.1.0';
 
 const save = () => ({ cc: 111, name: 'Guardar no pedal', group: 'presets', kind: 'save', confirmation: 'Guardar neste slot do pedal? O preset existente será substituído.' });
 const reset = () => action(56, 'Factory reset', 'maintenance', 1, 'ATENÇÃO: executar FACTORY RESET? Esta operação pode apagar presets e configurações.');
@@ -114,7 +114,7 @@ const genControls = [
   toggle(103, 'AUX', 'footswitch'), toggle(102, 'BYPASS', 'footswitch'),
   { ...hardwareHidden('ALT menu · hardware'), initial: 1, onValue: 0, offValue: 1, hint: 'CC104 é invertido neste pedal: 0 entra em ALT, 1–127 sai. ON na interface significa ALT ativo.' },
   range(20, 'Ramp speed', 'ramping'),
-  range(24, 'AUX onset', 'hidden'), select(26, 'Bypass type', 'hidden', [{ value: 0, label: 'True bypass · <64' }, { value: 127, label: 'DSP bypass · >64' }], 0, 'O manual não define o valor 64. Usamos 0/127, sem enviar o ponto ambíguo.'),
+  range(24, 'AUX onset', 'hidden'), select(26, 'Bypass type', 'hidden', [{ value: 0, label: 'True bypass' }, { value: 127, label: 'DSP bypass' }], 0, 'O manual não define o valor 64. Usamos 0/127, sem enviar o ponto ambíguo.'),
   range(27, 'Hiss level', 'hidden'), range(28, 'Mechanical noise', 'hidden'), range(29, 'Crinkle / pop', 'hidden'),
   select(32, 'Input gain', 'hidden', [{ value: 1, label: 'Line level' }, { value: 2, label: 'Instrument level' }, { value: 3, label: 'High gain' }], 2),
   toggle(52, 'Ramp / Bounce', 'ramping'), expression(), save(),
@@ -130,13 +130,18 @@ const generation = {
   hiddenCc: 104, hiddenOn: 0, hiddenOff: 1, synth: false, models,
   manualUrl: 'https://www.chasebliss.com/s/Generation-Loss-MKII_MIDI-Manual_Pedal_Chase-Blisspdf.pdf',
   mainManualUrl: 'https://cb2k22.squarespace.com/s/Generation-Loss-MKII_Manual_Pedal_Chase-Bliss.pdf',
-  label: (cc, value, state) => cc === 16 && !state[72] ? models.find((model) => model.value === value)?.label || `CC ${value}` : rawPercent(cc, value),
+  label: (cc, value, state) => cc === 16 && !state[72] ? models.find((model) => model.value === value)?.label || rawPercent(cc, value) : rawPercent(cc, value),
   modeGroups: [[21, 'AUX · performance']],
   modes: [
     mode(21, 1, 'STOP', 'Simula a paragem da fita. A velocidade de chegada é controlada por AUX onset.', 'tape', 'Travar o tempo.'),
     mode(21, 2, 'FILTER', 'A função AUX desativa o modelo de fita e deixa passar o sinal sem essa filtragem.', 'space', 'Libertar o sinal.'),
     mode(21, 3, 'FAIL', 'A função AUX acentua falhas. DROP/SNAG/HUM BYP permitem escolher o que participa.', 'grain', 'Deixar a fita falhar.'),
   ],
+  modePresentation: (state, cc) => {
+    const selected = generation.modes.find((item) => item.cc === cc && item.value === state[cc]);
+    return state[cc] === 3 && state[72] && state[76] && state[77]
+      ? { ...selected, name: 'FREEZE', summary: 'Suster a memória da fita.' } : selected;
+  },
   signal: (state) => `IN → ${state[72] ? 'CLASSIC · LP / GEN / HP' : 'MODEL / SATURATE / FAILURE'} → OUT`,
   note: 'CLASSIC (CC72) muda MODEL → LP, SATURATE → GEN e FAILURE → HP; são os mesmos CC14–19. FREEZE: Classic + AUX em FAIL + DROP BYP/SNAG BYP ligados. Não há Synth, tap tempo ou Factory Reset documentados. Os modelos usam os valores exatos da tabela oficial.',
 };

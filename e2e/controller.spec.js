@@ -95,38 +95,39 @@ test('failed preset recall restores the displayed preset; high slots have an exp
   await page.locator('#physical-preset').selectOption('2');
   await expect(page.locator('#physical-preset')).toHaveValue('1');
   await page.evaluate(() => { window.failAll = false; });
-  await page.locator('#tab-settings').click();
+  await page.locator('#tab-presets').click();
   await page.locator('#preset-slot').fill('122');
   await page.locator('#recall-preset').click();
   await expect(page.locator('#physical-preset')).toHaveValue('122');
-  await expect(page.locator('#physical-preset option:checked')).toHaveText('PC · 122');
+  await expect(page.locator('#physical-preset option:checked')).toHaveText('Preset 122');
   await expect(page.locator('#pedal-knobs [data-cc="14"]')).toHaveClass(/stale/);
   await page.locator('#pedal-cc-14').fill('25');
   await expect(page.locator('#pedal-knobs [data-cc="14"]')).not.toHaveClass(/stale/);
 });
 
 test('preset confirmation identifies and retains the slot; cancel sends nothing', async ({ page }) => {
-  await page.locator('#tab-settings').click();
+  await page.locator('#tab-presets').click();
   await page.locator('#preset-slot').fill('122');
   await page.locator('#cc-111').click();
   await expect(page.locator('#confirm-text')).toContainText('Slot 122');
   await page.evaluate(() => { document.getElementById('preset-slot').value = '1'; });
-  await page.getByRole('button', { name: 'Confirmar envio', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
   expect(await messages(page)).toEqual([[177, 111, 122]]);
   await clearMessages(page);
+  await page.locator('#tab-settings').click();
   await page.locator('#cc-56').click();
   await page.getByRole('button', { name: 'Cancelar', exact: true }).click();
   expect(await messages(page)).toEqual([]);
 });
 
 test('pending confirmation cannot migrate to a different MIDI target', async ({ page }) => {
-  await page.locator('#tab-settings').click();
+  await page.locator('#tab-presets').click();
   await page.locator('#cc-111').click();
   await page.evaluate(() => {
     const select = document.getElementById('channel');
     select.value = '3'; select.dispatchEvent(new Event('change'));
   });
-  await page.getByRole('button', { name: 'Confirmar envio', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
   expect(await messages(page)).toEqual([]);
   await expect(page.locator('#notification')).toContainText('Destino MIDI alterado');
 });
@@ -147,7 +148,7 @@ test('Note Off failures remain retryable and block preset/reset/Clock operations
   expect(await messages(page)).toEqual([[145, 60, 100]]);
   await page.locator('#tab-settings').click();
   await page.locator('#cc-110').click();
-  await page.getByRole('button', { name: 'Confirmar envio', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
   expect(await messages(page)).toEqual([[145, 60, 100]]);
   await page.evaluate(() => { window.failNoteOff = false; });
   await page.locator('#tab-synth').click();
@@ -174,6 +175,7 @@ test('notes release on their original channel and Clock exits with Note Off firs
 });
 
 test('numeric invalid input is rejected and all CCs remain reachable without duplicate IDs', async ({ page }) => {
+  await page.locator('#technical-values').check();
   const numeric = page.getByRole('spinbutton', { name: 'TIME valor CC', exact: true });
   await numeric.fill('128'); await numeric.press('Tab');
   await expect(numeric).toHaveValue('64');
@@ -188,7 +190,7 @@ test('all tabs and both banks fit mobile and desktop widths', async ({ page }) =
     for (const bank of [false, true]) {
       await page.locator('#tab-hidden').click();
       if ((await page.locator('#cc-104').getAttribute('aria-pressed') === 'true') !== bank) await page.locator('#cc-104').click();
-      for (const tab of ['performance', 'hidden', 'dips', 'synth', 'settings']) {
+      for (const tab of ['performance', 'hidden', 'dips', 'synth', 'presets', 'settings']) {
         await page.locator(`#tab-${tab}`).click();
         expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
       }

@@ -1,4 +1,4 @@
-import { pedals } from './pedals.js?v=2.0.0';
+import { pedals } from './pedals.js?v=2.1.0';
 
 for (const pedal of pedals) {
   const link = document.createElement('a');
@@ -14,8 +14,7 @@ for (const pedal of pedals) {
   const variant = document.createElement('span'); variant.className = 'eyebrow'; variant.textContent = pedal.variant;
   const name = document.createElement('h2'); name.textContent = pedal.name;
   const description = document.createElement('p'); description.textContent = pedal.subtitle;
-  const meta = document.createElement('span'); meta.className = 'choice-meta'; meta.textContent = `${pedal.controls.length} CC · Presets${pedal.synth ? ' · Synth' : ''}`;
   const open = document.createElement('span'); open.className = 'choice-open'; open.textContent = 'Abrir controlador ↗';
-  content.append(variant, name, description, meta, open); link.append(preview, content);
+  content.append(variant, name, description, open); link.append(preview, content);
   document.getElementById('pedal-library').append(link);
 }

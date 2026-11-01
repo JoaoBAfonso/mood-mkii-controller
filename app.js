@@ -1,5 +1,8 @@
-import { getPedal } from './pedals.js?v=2.0.0';
-import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=2.0.0';
+import { getPedal } from './pedals.js?v=2.1.0';
+import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=2.1.0';
+import { createPresetManager } from './presets.js?v=2.1.0';
+import { controlHelp, controlName, controlChoices, modeDetail } from './help.js?v=2.1.0';
+import { createHelpTooltip } from './tooltip.js?v=2.1.0';
 
 const $ = (id) => document.getElementById(id);
 const pedal = getPedal(new URLSearchParams(location.search).get('pedal'));
@@ -26,7 +29,6 @@ $('pedal-category').textContent = pedal.category;
 $('panel-title').textContent = pedal.category;
 $('pedal-edition').textContent = `Web MIDI · ${pedal.variant}`;
 $('pedal-bottom').textContent = `${pedal.name} · MIDI STUDIO`;
-$('model-note').textContent = pedal.note;
 $('main-manual-link').href = pedal.mainManualUrl;
 document.querySelector('.pedal-area').setAttribute('aria-label', `Controlos físicos do ${pedal.name}`);
 if (!pedal.synth) $('tab-synth').remove();
@@ -40,6 +42,8 @@ const views = new Map();
 let access;
 const notes = new Map();
 let visibleBank = 'normal';
+let presetManager;
+const help = createHelpTooltip();
 $('manual-link').href = manualUrl;
 for (let channel = 1; channel <= 16; channel++) $('channel').add(new Option(String(channel), String(channel)));
 $('channel').value = '2';
@@ -52,7 +56,8 @@ function contextKey() {
 }
 contexts.set(contextKey(), context);
 function updateStateNote() {
-  document.querySelector('.state-note strong').textContent = context.reason || 'Valores da interface, não telemetria.';
+  document.querySelector('.state-note').hidden = !context.reason;
+  document.querySelector('.state-note strong').textContent = context.reason;
 }
 function switchContext() {
   const key = contextKey();
@@ -74,7 +79,7 @@ function notify(message) {
 function updateConnection() {
   const connected = output()?.state === 'connected';
   $('connection-status').textContent = demo() ? 'Demonstração' : connected ? 'Saída MIDI pronta' : 'Não ligado';
-  $('connection-detail').textContent = demo() ? 'Simulação · nada é enviado ao hardware' : connected ? 'Interface ligada · resposta do pedal não verificada' : 'Nenhum comando enviado ao pedal';
+  $('connection-detail').textContent = demo() ? 'Explorar em simulação' : connected ? `${output().name || 'Interface MIDI'} · canal ${channel()}` : 'Escolhe a saída e o canal';
   $('status-dot').classList.toggle('ready', connected && !demo());
   $('status-dot').classList.toggle('demo', demo());
   document.body.classList.toggle('demo-mode', demo());
@@ -104,7 +109,14 @@ function updateControl(control) {
   const value = state[control.cc];
   for (const view of controlViews) {
     view.root.classList.toggle('stale', context.stale.has(control.cc));
+    view.name.textContent = controlName(pedal, control, state);
     if (view.input) {
+      if (view.input.tagName === 'SELECT') {
+        for (const choice of controlChoices(pedal, control, state)) {
+          const option = [...view.input.options].find((item) => Number(item.value) === choice.value);
+          if (option.textContent !== choice.label) option.textContent = choice.label;
+        }
+      }
       view.input.value = control.cc === pedal.waveformCc && view.input.tagName === 'SELECT'
         ? [...control.choices].reverse().find((option) => value >= option.value).value : value;
     }
@@ -113,7 +125,7 @@ function updateControl(control) {
       const visual = control.kind === 'select' && control.cc !== pedal.waveformCc ? control.choices.findIndex((choice) => choice.value === value) / (control.choices.length - 1) : value / 127;
       view.knob.style.setProperty('--rotation', `${-135 + visual * 270}deg`);
     }
-    if (view.readout) view.readout.textContent = `${controlValueLabel(control.cc, value, state)} · ${value}`;
+    if (view.readout) view.readout.textContent = controlValueLabel(control.cc, value, state);
     if (view.button) {
       view.button.setAttribute('aria-pressed', String(isOn(control)));
       view.button.classList.toggle('active', isOn(control));
@@ -126,6 +138,7 @@ function change(control, value) {
   if (transmit(ccMessage(channel(), control.cc, value), `${control.name} · CC${control.cc} = ${value}`)) {
     state[control.cc] = value;
     context.stale.delete(control.cc);
+    if (!context.stale.size) { context.reason = ''; updateStateNote(); }
     updateControl(control);
     if ([21, 23, 72].includes(control.cc)) {
       for (const cc of [16, 17, 18, 19]) updateControl(controls.find((c) => c.cc === cc));
@@ -135,8 +148,10 @@ function change(control, value) {
       renderPedal();
     }
     if ([72, 74, 75].includes(control.cc)) renderPedal();
+    if ([72, 76, 77].includes(control.cc)) updateControl(controls.find((candidate) => candidate.cc === 21));
     if (control.cc === 78 && pedal.id === 'lost-found') updatePreset();
     updateModeIllustrations();
+    help.refresh();
   } else updateControl(control);
 }
 function confirmCommand(message, callback) {
@@ -161,14 +176,10 @@ function makeControl(control, physical = false, position = control.cc) {
   const id = `${physical ? 'pedal-' : ''}cc-${control.cc}`;
   label.htmlFor = id;
   const name = document.createElement('span');
-  name.textContent = pedal.id === 'generation-loss-mkii' && visibleBank === 'normal' && state[72]
-    ? ({ 16: 'LOW PASS', 18: 'GENERATION', 19: 'HIGH PASS' }[control.cc] || control.name) : control.name;
-  const badge = document.createElement('small');
-  badge.className = 'cc-badge';
-  badge.textContent = `CC ${control.cc}`;
-  label.append(name, badge);
+  name.textContent = controlName(pedal, control, state);
+  label.append(name);
   root.append(label);
-  const view = { root, physical };
+  const view = { root, physical, name };
   const steppedKnob = physical && (control.cc === pedal.waveformCc || (position >= 14 && position <= 19 && control.kind === 'select'));
   const knobValue = (raw) => steppedKnob && control.cc !== pedal.waveformCc
     ? control.choices.reduce((best, choice) => Math.abs(choice.value - raw) < Math.abs(best.value - raw) ? choice : best).value : raw;
@@ -223,7 +234,7 @@ function makeControl(control, physical = false, position = control.cc) {
   } else if (control.kind === 'select') {
     const input = document.createElement('select');
     input.id = id;
-    for (const option of control.choices) input.add(new Option(option.label, String(option.value)));
+    for (const option of controlChoices(pedal, control, state)) input.add(new Option(option.label, String(option.value)));
     input.addEventListener('change', () => change(control, Number(input.value)));
     root.append(input);
     view.input = input;
@@ -231,7 +242,7 @@ function makeControl(control, physical = false, position = control.cc) {
     const button = document.createElement('button');
     button.id = id;
     button.type = 'button';
-    button.setAttribute('aria-label', `${control.name} CC${control.cc}`);
+    button.setAttribute('aria-label', controlName(pedal, control, state));
     button.innerHTML = physical ? '<span class="led"></span><span class="metal-switch"></span><span class="toggle-state">OFF</span>' : '<span class="switch-track"></span><span class="toggle-state">OFF</span>';
     button.addEventListener('click', () => change(control, isOn(control) ? (control.offValue ?? 0) : (control.onValue ?? 1)));
     root.append(button);
@@ -239,7 +250,7 @@ function makeControl(control, physical = false, position = control.cc) {
   } else {
     const button = document.createElement('button');
     button.id = id;
-    button.textContent = control.name;
+    button.textContent = controlName(pedal, control, state);
     button.className = control.confirmation ? 'danger-outline' : 'action-button';
     button.addEventListener('click', () => {
       const slot = control.kind === 'save' ? readSlot() : null;
@@ -258,11 +269,7 @@ function makeControl(control, physical = false, position = control.cc) {
     });
     root.append(button);
   }
-  if (control.hint && !physical) {
-    const hint = document.createElement('p');
-    hint.className = 'hint'; hint.textContent = control.hint; root.append(hint);
-  }
-  if (control.hint) root.title = control.hint;
+  help.attach(root, () => controlHelp(pedal, control, state), controlName(pedal, control, state));
   if (!views.has(control.cc)) views.set(control.cc, new Set());
   views.get(control.cc).add(view);
   updateControl(control);
@@ -270,10 +277,11 @@ function makeControl(control, physical = false, position = control.cc) {
 }
 const panelDescriptions = {
   performance: ['Toca no momento.', 'Escolhe os modos e encontra os comandos de performance específicos deste pedal.'],
-  hidden: ['Hidden controls.', 'Este separador mostra o banco Hidden sem enviar MIDI. O botão CC104 abaixo muda o modo no hardware; os parâmetros dedicados funcionam em ambos os modos.'],
+  hidden: ['Outra camada do som.', 'Largura, mistura e comportamento: explora os parâmetros alternativos.'],
   dips: ['Movimento e personalidade.', 'Os DIP switches correspondem à ordem física, vistos por cima do pedal.'],
   synth: ['Transforma texturas em notas.', 'Note On entra no modo Synth. Usa o teclado abaixo; o pedal precisa de áudio/loop capturado. Estes parâmetros são globais.'],
-  settings: ['O teu ponto de partida.', 'Presets no pedal e configurações globais. Operações destrutivas pedem confirmação.'],
+  presets: ['Presets.', ''],
+  settings: ['O teu ponto de partida.', 'Timing e configurações globais.'],
 };
 for (const [id, [title, description]] of Object.entries(panelDescriptions)) {
   if (id === 'synth' && !pedal.synth) continue;
@@ -299,6 +307,7 @@ function group(name, title, panelId) {
   container.append(grid); $(`panel-${panelId}`).append(container);
 }
 function renderPedal() {
+  help.hide();
   for (const controlViews of views.values()) {
     for (const view of controlViews) {
       if (view.physical && view.root.closest('#pedal-knobs, #pedal-toggles')) controlViews.delete(view);
@@ -309,7 +318,8 @@ function renderPedal() {
   const hidden = visibleBank === 'hidden';
   document.querySelector('.pedal').classList.toggle('hidden-mode', hidden);
   $('pedal-bank').textContent = hidden ? 'HIDDEN · banco alternativo' : 'NORMAL · banco principal';
-  $('bank-description').textContent = `Vista ${hidden ? 'Hidden / ALT' : 'normal'} · CC104 ${context.stale.has(104) ? 'não sincronizado' : state[104] === pedal.hiddenOn ? 'ON' : 'OFF'}${demo() ? ' (demo)' : ' (último estado da interface)'}. Mudar de separador não envia CC104.`;
+  $('bank-description').textContent = hidden ? 'Parâmetros alternativos' : pedal.id === 'generation-loss-mkii' && state[72] ? 'Classic · LP / Generation / HP' : '';
+  $('bank-description').hidden = !$('bank-description').textContent;
   controls.filter((c) => c.group === 'pedal').forEach((c) => {
     const mapped = hidden && hiddenPedalMap[c.cc] !== undefined ? controls.find((candidate) => candidate.cc === hiddenPedalMap[c.cc]) : c;
     const element = makeControl(mapped, true, c.cc);
@@ -327,22 +337,22 @@ group('dip-right', 'Banco direito · Customize', 'dips');
 if (pedal.synth) group('synth', '', 'synth');
 group('global', 'Configurações globais', 'settings');
 
-const presetSection = document.createElement('div');
-presetSection.className = 'preset-section';
-presetSection.innerHTML = '<h4>Presets no pedal</h4><p class="hint">Slots 1–122. Slot 1 = toggle direito; slot 2 = esquerdo. LIVE (PC0) recupera as posições físicas. Os knobs na interface ficam sem sincronização após um PC.</p><div class="preset-actions"><label>Slot<input id="preset-slot" type="number" min="1" max="122" step="1" value="1"></label><button id="recall-preset">Carregar preset</button><button id="live-preset">LIVE · PC0</button></div>';
-$('panel-settings').append(presetSection);
-group('presets', '', 'settings');
+presetsSetup();
+function presetsSetup() {
+  presetManager = createPresetManager({
+    pedal, panel: $('panel-presets'), quick: $('preset-quick'),
+    recall, current: () => context.preset, targetKey: contextKey, confirm: confirmCommand, notify, onChange: updatePreset,
+  });
+  const save = controls.find((control) => control.kind === 'save');
+  $('preset-save-control').append(makeControl(save));
+  $('open-presets').onclick = () => { activateTab($('tab-presets')); $('tab-presets').focus(); };
+}
 group('maintenance', 'Zona de manutenção · cuidado', 'settings');
 function readSlot() {
-  const input = $('preset-slot');
-  if (input.value === '' || !input.validity.valid) {
-    notify('Escolhe um slot inteiro entre 1 e 122.');
-    return null;
-  }
-  return Number(input.value);
+  return presetManager.readSlot();
 }
 function markUnknown() {
-  context.reason = 'Estado não sincronizado após preset/reset/Random. Valores ~ são anteriores ao comando.';
+  context.reason = '~ Valores anteriores ao preset ou à alteração. Move um controlo para o definir novamente.';
   context.stale = new Set(controls.filter((c) => 'initial' in c).map((c) => c.cc));
   context.preset = '';
   renderPedal();
@@ -365,26 +375,29 @@ function updatePreset() {
     if (option.dataset.dynamic) option.remove();
   }
   if (![...select.options].some((option) => option.value === context.preset)) {
-    const option = new Option(context.preset ? `PC · ${context.preset}` : 'NÃO SINCRONIZADO', context.preset);
+    const option = new Option(context.preset ? presetManager?.title(Number(context.preset)) || `Preset ${context.preset}` : 'NÃO SINCRONIZADO', context.preset);
     option.dataset.dynamic = 'true';
     option.disabled = true;
     select.add(option);
   }
   select.value = context.preset;
+  presetManager?.update();
 }
 function recall(slot) {
-  if (!stopNotes()) { updatePreset(); return; }
+  if (!stopNotes()) { updatePreset(); return false; }
   if (transmit(pcMessage(channel(), slot), slot ? `Carregar preset ${slot} · PC` : 'LIVE · PC0')) {
     markUnknown();
     context.preset = String(slot);
+    updatePreset();
+    return true;
   }
   updatePreset();
+  return false;
 }
-$('recall-preset').onclick = () => { const slot = readSlot(); if (slot !== null) recall(slot); };
-$('live-preset').onclick = () => recall(0);
 $('physical-preset').onchange = () => recall(Number($('physical-preset').value));
 
 function activateTab(button) {
+  help.hide();
   if (button.dataset.tab !== 'synth') stopNotes();
   document.querySelectorAll('[data-tab]').forEach((tab) => {
     const selected = tab === button;
@@ -448,19 +461,22 @@ function updateModeIllustrations() {
   if (!$('mode-description-21')) return;
   for (const [cc] of pedal.modeGroups) {
     const selected = modeIllustrations.find((mode) => mode.cc === cc && mode.value === state[cc]);
-    $(`mode-description-${cc}`).textContent = `${context.stale.has(cc) ? 'Último modo da interface (~): ' : ''}${selected.description}`;
+    $(`mode-description-${cc}`).textContent = `${context.stale.has(cc) ? '~ ' : ''}${selected.description}`;
     document.querySelectorAll(`[data-mode-cc="${cc}"]`).forEach((button) => {
       button.setAttribute('aria-pressed', String(Number(button.dataset.modeValue) === state[cc]));
       button.classList.toggle('stale', context.stale.has(cc));
       if (pedal.modePresentation) {
         const presentation = pedal.modePresentation({ ...state, [cc]: Number(button.dataset.modeValue) }, cc);
-        button.setAttribute('aria-label', `Selecionar ${presentation.name} · ${cc === 21 ? 'L' : 'R'}`);
-        button.innerHTML = `${svgDrawing(presentation.drawing)}<strong>${presentation.name}</strong><span>${presentation.summary}</span>`;
+        button.setAttribute('aria-label', `Selecionar ${presentation.name}${pedal.effects ? ` · ${cc === 21 ? 'L' : 'R'}` : ''}`);
+        if (button.dataset.family !== presentation.name) {
+          button.dataset.family = presentation.name;
+          button.innerHTML = `${svgDrawing(presentation.drawing)}<strong>${presentation.name}</strong><span>${presentation.summary}</span>`;
+        }
       }
     });
     if (pedal.modePresentation) {
       const presentation = pedal.modePresentation(state, cc);
-      $(`mode-description-${cc}`).textContent = `${context.stale.has(cc) ? 'Último modo (~): ' : ''}${presentation.description}`;
+      $(`mode-description-${cc}`).textContent = `${context.stale.has(cc) ? '~ ' : ''}${presentation.description}`;
     }
   }
   if (pedal.waveformCc) {
@@ -478,6 +494,7 @@ function updateModeIllustrations() {
     $('signal-flow').textContent = `${context.stale.has(22) || context.stale.has(21) || context.stale.has(23) ? '~ ' : ''}${state[22] === 0 ? 'IN' : state[22] === 2 ? `IN + LOOP (${loop})` : `LOOP (${loop})`} → WET (${wet}) → OUT`;
   } else $('signal-flow').textContent = `${[21, 22, 23, 72].some((cc) => context.stale.has(cc)) ? '~ ' : ''}${pedal.signal(state)}`;
   updateModeTools();
+  for (const [cc] of pedal.modeGroups) $(`mode-description-${cc}`).textContent = `${context.stale.has(cc) ? '~ ' : ''}${modeDetail(pedal, state, cc)}`;
 }
 createModeIllustrations();
 function createModeTools() {
@@ -491,14 +508,14 @@ function createModeTools() {
     label.append(input); section.append(label);
   };
   if (pedal.models) {
-    addMenu('model-select', 'Modelos de fita · CC16', pedal.models, 16);
+    addMenu('model-select', 'Modelos de fita', pedal.models, 16);
     const classic = document.createElement('button'); classic.id = 'classic-shortcut';
-    classic.textContent = 'Classic · CC72';
+    classic.textContent = 'Classic';
     classic.onclick = () => change(controls.find((control) => control.cc === 72), state[72] ? 0 : 1);
     section.append(classic);
   }
-  if (pedal.stations) addMenu('station-select', 'RADIO · estações CC19', pedal.stations, 19);
-  if (pedal.chords) addMenu('chord-select', 'FLIP · acordes CC17', pedal.chords, 17);
+  if (pedal.stations) addMenu('station-select', 'RADIO · estações', pedal.stations, 19);
+  if (pedal.chords) addMenu('chord-select', 'FLIP · acordes', pedal.chords, 17);
   if (pedal.effects) {
     for (const [modeCc, modifyCc] of [[21, 17], [23, 19]]) {
       const row = document.createElement('div'); row.className = 'effect-row';
@@ -524,7 +541,7 @@ function updateModeTools() {
     input.disabled = disabled;
     const value = intervals ? pedal.chords.findLast((chord) => chord.value <= state[cc]).value : state[cc];
     if (![...input.options].some((option) => Number(option.value) === value)) {
-      const option = new Option(`CC ${value} · valor atual`, String(value)); option.dataset.dynamic = 'true'; option.disabled = true;
+      const option = new Option(`${Math.round(value / 127 * 100)}% · ajuste atual`, String(value)); option.dataset.dynamic = 'true'; option.disabled = true;
       input.add(option);
     }
     input.value = value;
@@ -555,7 +572,7 @@ createModeTools();
 updateModeIllustrations();
 const keyboard = document.createElement('div');
 keyboard.className = 'keyboard-section';
-keyboard.innerHTML = '<h4>Teclado · C4–C5</h4><label class="velocity-label">Velocidade <input id="velocity" type="range" min="1" max="127" value="100"></label><div class="keyboard" id="keyboard"></div><button id="stop-notes" class="text-button">Parar notas ativas</button><p class="hint">Clica e mantém premido, ou usa Espaço/Enter com uma tecla focada. Sem síntese de áudio no navegador.</p>';
+keyboard.innerHTML = '<h4>Teclado · C4–C5</h4><label class="velocity-label">Velocidade <input id="velocity" type="range" min="1" max="127" value="100"></label><div class="keyboard" id="keyboard"></div><button id="stop-notes" class="text-button">Parar notas ativas</button><p class="hint">Mantém uma tecla premida para tocar o som capturado. Teclado: Espaço / Enter.</p>';
 if (pedal.synth) $('panel-synth').prepend(keyboard);
 function noteOn(note, key) {
   if (notes.has(note)) return;
@@ -629,14 +646,15 @@ $('connect').onclick = async () => {
     access.onstatechange = refreshOutputs;
     refreshOutputs();
     if (![...notes.values()].some((note) => note.pending)) {
-      notify($('output').options.length === 1 ? 'Nenhuma saída MIDI encontrada. Liga uma interface USB–MIDI e tenta novamente.' : 'Seleciona a saída MIDI. A ligação não envia valores automaticamente.');
+      notify($('output').options.length === 1 ? 'Nenhuma saída MIDI encontrada. Liga uma interface USB–MIDI e tenta novamente.' : '');
     }
   } catch (error) {
     notify(`Acesso MIDI recusado ou indisponível: ${error.message}. Verifica as permissões do navegador.`);
   } finally { $('connect').disabled = false; }
 };
 $('output').onchange = () => { stopNotes(); switchContext(); updateConnection(); };
-$('channel').onchange = () => { stopNotes(); switchContext(); };
+$('channel').onchange = () => { stopNotes(); switchContext(); updateConnection(); };
 $('demo').onchange = () => { stopNotes(); switchContext(); updateConnection(); };
 $('clear-log').onclick = () => { $('log').replaceChildren(); $('monitor-empty').hidden = false; };
+$('technical-values').onchange = () => document.body.classList.toggle('technical-view', $('technical-values').checked);
 updateConnection();

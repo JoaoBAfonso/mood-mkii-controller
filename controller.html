@@ -8,13 +8,13 @@
   <title>Pedal · MIDI Studio</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/fonts/outfit-variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=2.0.0">
-  <script type="module" src="app.js?v=2.0.0"></script>
+  <link rel="stylesheet" href="styles.css?v=2.1.0">
+  <script type="module" src="app.js?v=2.1.0"></script>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" id="back-pedals" href="./"><span class="brand-icon">←</span> Pedais <span> / MIDI STUDIO</span></a>
-    <a class="manual-link" id="manual-link" target="_blank" rel="noreferrer">Manual MIDI ↗</a>
+    <nav class="manual-links" aria-label="Manuais"><a class="manual-link" id="main-manual-link" target="_blank" rel="noreferrer">Manual ↗</a><a class="manual-link" id="manual-link" target="_blank" rel="noreferrer">Manual MIDI ↗</a></nav>
   </header>
   <main>
     <section class="intro">
@@ -23,13 +23,14 @@
       <span class="edition">CONTROLADOR INDEPENDENTE<br><strong id="pedal-edition"></strong></span>
     </section>
     <section class="connection card" aria-label="Ligação MIDI">
-      <div class="connection-heading"><span class="status-dot" id="status-dot"></span><div><strong id="connection-status">Não ligado</strong><small id="connection-detail">Nenhum comando enviado ao pedal</small></div></div>
+      <div class="connection-heading"><span class="status-dot" id="status-dot"></span><div><strong id="connection-status">Não ligado</strong><small id="connection-detail">Escolhe a saída e o canal</small></div></div>
       <button id="connect" class="primary">Ligar MIDI <span>↗</span></button>
       <label class="compact">Saída MIDI<select id="output"><option value="">Selecionar saída</option></select></label>
       <label class="compact channel">Canal<select id="channel"></select></label>
       <label class="demo-switch"><input type="checkbox" id="demo"> Modo demo</label>
     </section>
     <div id="notification" class="notification" role="alert" hidden></div>
+    <section class="preset-quick card" id="preset-quick" aria-label="Presets de performance"></section>
     <div class="workspace">
       <section class="pedal-area" aria-label="Controlos físicos">
         <div class="section-heading"><span>01 / O PEDAL</span><span class="tag" id="pedal-bank" aria-live="polite">NORMAL · banco principal</span></div>
@@ -45,10 +46,9 @@
             <div class="pedal-bottom" id="pedal-bottom"></div>
           </div>
         </div>
-        <p class="pedal-tip">Arrasta os knobs, usa os sliders ou introduz o valor CC.<br>Posições como no pedal · os CC adicionais estão nos separadores.</p>
-        <div class="signal-card"><span>ROUTING / ESQUEMA</span><strong id="signal-flow"></strong><small>Esquema simplificado · valores da interface, não telemetria</small></div>
-        <div class="state-note"><span>ⓘ</span><p><strong>Valores da interface, não telemetria.</strong> Estes pedais não documentam leitura de estado MIDI. Alterações nos footswitches/knobs físicos não chegam ao site. Ligar ou mudar de preset não sincroniza os knobs. Nada é enviado automaticamente ao ligar.</p></div>
-        <p class="model-note" id="model-note"></p>
+        <p class="pedal-tip">Arrasta os knobs. Passa o rato ou toca em ? para explorar.</p>
+        <div class="signal-card"><span>PERCURSO DO SOM</span><strong id="signal-flow"></strong></div>
+        <div class="state-note" hidden><p><strong></strong></p></div>
       </section>
       <section class="control-area card" aria-label="Comandos adicionais">
         <div class="panel-heading"><div><p class="eyebrow">02 / EXPLORAR</p><h2 id="panel-title"></h2></div><span class="panel-icon" aria-hidden="true">✳</span></div>
@@ -57,17 +57,19 @@
           <button role="tab" id="tab-hidden" aria-controls="panel-hidden" aria-selected="false" tabindex="-1" data-tab="hidden">Hidden</button>
           <button role="tab" id="tab-dips" aria-controls="panel-dips" aria-selected="false" tabindex="-1" data-tab="dips">DIP / Ramp</button>
           <button role="tab" id="tab-synth" aria-controls="panel-synth" aria-selected="false" tabindex="-1" data-tab="synth">Synth</button>
+          <button role="tab" id="tab-presets" aria-controls="panel-presets" aria-selected="false" tabindex="-1" data-tab="presets">Presets</button>
           <button role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1" data-tab="settings">Configurar</button>
         </div>
         <div id="panels"></div>
+        <label class="technical-switch"><input type="checkbox" id="technical-values"> Valores MIDI</label>
       </section>
     </div>
     <section class="bottom-grid">
-      <details class="card guide"><summary>Como ligar o pedal <span>+</span></summary><ol><li>Usa Chrome ou Edge num computador e autoriza o acesso MIDI. O site funciona por HTTPS. Safari e Firefox podem não disponibilizar Web MIDI.</li><li>Liga uma interface USB–MIDI ao computador e a sua saída ao MIDI IN TRS de ¼″ do pedal, usando um conversor compatível (por exemplo, Chase Bliss MIDIBox). Um cabo USB direto ao pedal não substitui esta interface. Não assumas que qualquer adaptador TRS serve.</li><li>Seleciona a saída da interface e o canal do pedal (por defeito, <strong>2</strong>). Para mudar o canal no pedal: mantém os dois footswitches premidos ao ligar a alimentação e envia um Program Change no canal desejado.</li><li>Desativa o modo demo. Experimenta um CC e confirma a resposta no pedal. Confirma sempre o modelo e canal: o site não deteta qual pedal está ligado.</li></ol><p>Os manuais não publicam uma implementação SysEx. Não são pedidos privilégios SysEx. Nas páginas com MIDI clock, o relógio deve ser fornecido por um controlador externo; não é gerado por este site.</p><p><a id="main-manual-link" target="_blank" rel="noreferrer">Manual completo do pedal ↗</a></p></details>
-      <section class="card activity" aria-label="Monitor MIDI"><div class="activity-heading"><h3>Monitor MIDI</h3><button id="clear-log" class="text-button">Limpar</button></div><p id="monitor-empty">Os próximos gestos aparecem aqui.</p><ol id="log" aria-label="Mensagens MIDI recentes"></ol></section>
+      <details class="card guide"><summary>Ligação e valores <span>+</span></summary><ol><li>Usa Chrome ou Edge. Liga a interface USB–MIDI ao MIDI IN TRS de ¼″ através de conversão compatível, como MIDIBox.</li><li>Escolhe a saída e o canal do pedal (por defeito, <strong>2</strong>). Confirma que selecionaste o modelo ligado.</li><li>Para mudar o canal do pedal, mantém os dois footswitches premidos ao ligá-lo e envia um Program Change nesse canal.</li></ol><p>Os valores mostram os últimos gestos da interface. Depois de carregar um preset, ~ marca os valores anteriores; mexe num controlo para o definir novamente.</p></details>
+      <details class="card activity" aria-label="Monitor MIDI"><summary>Monitor MIDI</summary><div class="activity-heading"><button id="clear-log" class="text-button">Limpar</button></div><p id="monitor-empty">Os próximos gestos aparecem aqui.</p><ol id="log" aria-label="Mensagens MIDI recentes"></ol></details>
     </section>
   </main>
   <footer><span>Feito para explorar. Sem contas, sem tracking, sem áudio na cloud.</span><span>Não afiliado à Chase Bliss · <a href="https://github.com/JoaoBAfonso/mood-mkii-controller" target="_blank" rel="noreferrer">Código no GitHub ↗</a></span></footer>
-  <dialog id="confirm-dialog"><form method="dialog"><p class="eyebrow">CONFIRMAR COMANDO</p><h2>Antes de continuar…</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Cancelar</button><button value="confirm" class="danger">Confirmar envio</button></div></form></dialog>
+  <dialog id="confirm-dialog"><form method="dialog"><p class="eyebrow">CONFIRMAR COMANDO</p><h2>Antes de continuar…</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Cancelar</button><button value="confirm" class="danger">Confirmar</button></div></form></dialog>
 </body>
 </html>
