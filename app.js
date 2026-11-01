@@ -1,8 +1,11 @@
-import { controls, controlValueLabel, manualUrl } from './controls.js';
-import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js';
+import { controls, controlValueLabel, manualUrl, hiddenPedalMap } from './controls.js?v=1.1.0';
+import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=1.1.0';
 
 const $ = (id) => document.getElementById(id);
-const state = Object.fromEntries(controls.filter((c) => 'initial' in c).map((c) => [c.cc, c.initial]));
+const initialState = () => Object.fromEntries(controls.filter((c) => 'initial' in c).map((c) => [c.cc, c.initial]));
+const contexts = new Map();
+let context = { values: initialState(), stale: new Set(), preset: '0', reason: '' };
+let state = context.values;
 const views = new Map();
 let access;
 const notes = new Map();
@@ -13,6 +16,25 @@ const channel = () => Number($('channel').value);
 const output = () => access?.outputs.get($('output').value);
 const demo = () => $('demo').checked;
 
+function contextKey() {
+  return demo() ? 'demo' : JSON.stringify([$('output').value, channel()]);
+}
+contexts.set(contextKey(), context);
+function updateStateNote() {
+  document.querySelector('.state-note strong').textContent = context.reason || 'Valores da interface, não telemetria.';
+}
+function switchContext() {
+  const key = contextKey();
+  if (!contexts.has(key)) {
+    contexts.set(key, { values: initialState(), stale: new Set(), preset: '0', reason: '' });
+  }
+  context = contexts.get(key);
+  state = context.values;
+  renderPedal();
+  controls.forEach(updateControl);
+  updatePreset();
+  updateStateNote();
+}
 function notify(message) {
   $('notification').textContent = message;
   $('notification').hidden = !message;
@@ -25,9 +47,9 @@ function updateConnection() {
   $('status-dot').classList.toggle('demo', demo());
   document.body.classList.toggle('demo-mode', demo());
 }
-function transmit(message, name) {
+function transmit(message, name, target = { output: output(), demo: demo() }) {
   try {
-    const result = sendMessage(output(), message, demo());
+    const result = sendMessage(target.output, message, target.demo);
     const entry = document.createElement('li');
     const title = document.createElement('strong');
     title.textContent = name;
@@ -37,7 +59,7 @@ function transmit(message, name) {
     $('log').prepend(entry);
     while ($('log').children.length > 8) $('log').lastChild.remove();
     $('monitor-empty').hidden = true;
-    notify('');
+    if (![...notes.values()].some((note) => note.pending)) notify('');
     return true;
   } catch (error) {
     notify(`Não foi possível enviar: ${error.message}`);
@@ -45,31 +67,46 @@ function transmit(message, name) {
   }
 }
 function updateControl(control) {
-  const view = views.get(control.cc);
-  if (!view) return;
+  const controlViews = views.get(control.cc);
+  if (!controlViews) return;
   const value = state[control.cc];
-  if (view.input) view.input.value = value;
-  if (view.numeric) view.numeric.value = value;
-  if (view.knob) view.knob.style.setProperty('--rotation', `${-135 + value / 127 * 270}deg`);
-  if (view.readout) view.readout.textContent = `${controlValueLabel(control.cc, value, state)} · ${value}`;
-  if (view.button) {
-    view.button.setAttribute('aria-pressed', String(value > 0));
-    view.button.classList.toggle('active', value > 0);
-    view.button.querySelector('.toggle-state').textContent = value > 0 ? 'ON' : 'OFF';
+  for (const view of controlViews) {
+    view.root.classList.toggle('stale', context.stale.has(control.cc));
+    if (view.input) {
+      view.input.value = control.cc === 25 && view.input.tagName === 'SELECT'
+        ? [...control.choices].reverse().find((option) => value >= option.value).value : value;
+    }
+    if (view.numeric) view.numeric.value = value;
+    if (view.knob) view.knob.style.setProperty('--rotation', `${-135 + value / 127 * 270}deg`);
+    if (view.readout) view.readout.textContent = `${controlValueLabel(control.cc, value, state)} · ${value}`;
+    if (view.button) {
+      view.button.setAttribute('aria-pressed', String(value > 0));
+      view.button.classList.toggle('active', value > 0);
+      view.button.querySelector('.toggle-state').textContent = value > 0 ? 'ON' : 'OFF';
+    }
   }
 }
 function change(control, value) {
+  if (control.cc === 18 && !stopNotes()) { updateControl(control); return; }
   if (transmit(ccMessage(channel(), control.cc, value), `${control.name} · CC${control.cc} = ${value}`)) {
     state[control.cc] = value;
+    context.stale.delete(control.cc);
     updateControl(control);
     if (control.cc === 23) updateControl(controls.find((c) => c.cc === 19));
+    if (control.cc === 104) renderPedal();
   } else updateControl(control);
 }
 function confirmCommand(message, callback) {
+  const key = contextKey();
   $('confirm-text').textContent = `${demo() ? 'MODO DEMO: apenas simulação. ' : ''}${message}`;
   $('confirm-dialog').returnValue = 'cancel';
-  $('confirm-dialog').onclose = () => {
-    if ($('confirm-dialog').returnValue === 'confirm') callback();
+  $('confirm-dialog').querySelector('form').onsubmit = (event) => {
+    event.preventDefault();
+    const result = event.submitter?.value || 'cancel';
+    $('confirm-dialog').close(result);
+    if (result !== 'confirm') return;
+    if (contextKey() !== key) { notify('Destino MIDI alterado. Volta a confirmar o comando para o novo destino.'); return; }
+    callback();
   };
   $('confirm-dialog').showModal();
 }
@@ -78,7 +115,8 @@ function makeControl(control, physical = false) {
   root.className = `control ${physical ? 'physical-control' : ''} ${control.kind}`;
   root.dataset.cc = control.cc;
   const label = document.createElement('label');
-  label.htmlFor = `cc-${control.cc}`;
+  const id = `${physical ? 'pedal-' : ''}cc-${control.cc}`;
+  label.htmlFor = id;
   const name = document.createElement('span');
   name.textContent = control.name;
   const badge = document.createElement('small');
@@ -86,8 +124,9 @@ function makeControl(control, physical = false) {
   badge.textContent = `CC ${control.cc}`;
   label.append(name, badge);
   root.append(label);
-  const view = {};
-  if (control.kind === 'range') {
+  const view = { root, physical };
+  const steppedKnob = physical && control.cc === 25;
+  if (control.kind === 'range' || steppedKnob) {
     if (physical) {
       const knob = document.createElement('div');
       knob.className = 'knob';
@@ -110,7 +149,7 @@ function makeControl(control, physical = false) {
       view.knob = knob;
     }
     const input = document.createElement('input');
-    input.type = 'range'; input.min = 0; input.max = 127; input.id = `cc-${control.cc}`;
+    input.type = 'range'; input.min = 0; input.max = 127; input.id = id;
     input.addEventListener('input', () => change(control, Number(input.value)));
     const numeric = document.createElement('input');
     numeric.type = 'number'; numeric.min = 0; numeric.max = 127; numeric.step = 1;
@@ -132,14 +171,14 @@ function makeControl(control, physical = false) {
     Object.assign(view, { input, numeric, readout });
   } else if (control.kind === 'select') {
     const input = document.createElement('select');
-    input.id = `cc-${control.cc}`;
+    input.id = id;
     for (const option of control.choices) input.add(new Option(option.label, String(option.value)));
     input.addEventListener('change', () => change(control, Number(input.value)));
     root.append(input);
     view.input = input;
   } else if (control.kind === 'toggle') {
     const button = document.createElement('button');
-    button.id = `cc-${control.cc}`;
+    button.id = id;
     button.type = 'button';
     button.setAttribute('aria-label', `${control.name} CC${control.cc}`);
     button.innerHTML = physical ? '<span class="led"></span><span class="metal-switch"></span><span class="toggle-state">OFF</span>' : '<span class="switch-track"></span><span class="toggle-state">OFF</span>';
@@ -148,22 +187,22 @@ function makeControl(control, physical = false) {
     view.button = button;
   } else {
     const button = document.createElement('button');
-    button.id = `cc-${control.cc}`;
+    button.id = id;
     button.textContent = control.name;
     button.className = control.confirmation ? 'danger-outline' : 'action-button';
     button.addEventListener('click', () => {
+      const slot = control.kind === 'save' ? readSlot() : null;
+      if (control.kind === 'save' && slot === null) return;
       const run = () => {
         if (control.kind === 'save') {
-          const slot = readSlot();
-          if (slot !== null) transmit(ccMessage(channel(), 111, slot), `Guardar preset ${slot} · CC111`);
+          transmit(ccMessage(channel(), 111, slot), `Guardar preset ${slot} · CC111`);
         } else {
-          if (control.cc === 59) stopNotes();
+          if ([59, 56, 110].includes(control.cc) && !stopNotes()) return;
           if (transmit(ccMessage(channel(), control.cc, control.value), `${control.name} · CC${control.cc}`) && [56, 110].includes(control.cc)) markUnknown();
         }
       };
       if (control.confirmation) {
-        if (control.kind === 'save' && readSlot() === null) return;
-        confirmCommand(control.confirmation, run);
+        confirmCommand(`${control.kind === 'save' ? `Slot ${slot}. ` : ''}${control.confirmation}`, run);
       } else run();
     });
     root.append(button);
@@ -173,13 +212,14 @@ function makeControl(control, physical = false) {
     hint.className = 'hint'; hint.textContent = control.hint; root.append(hint);
   }
   if (control.hint) root.title = control.hint;
-  views.set(control.cc, view);
+  if (!views.has(control.cc)) views.set(control.cc, new Set());
+  views.get(control.cc).add(view);
   updateControl(control);
   return root;
 }
 const panelDescriptions = {
   performance: ['Toca no momento.', 'Freeze, overdub e tap tempo sem procurar nos menus.'],
-  hidden: ['O outro lado do MOOD.', 'Acesso direto aos parâmetros ocultos. Não precisas de remapear os knobs.'],
+  hidden: ['O outro lado do MOOD.', 'Hidden menu troca o banco do pedal virtual. Os controlos abaixo também permitem acesso direto, sem ativar Hidden.'],
   dips: ['Movimento e personalidade.', 'Os DIP switches correspondem à ordem física, vistos por cima do pedal.'],
   synth: ['Transforma texturas em notas.', 'Note On entra no modo Synth. Usa o teclado abaixo; o pedal precisa de áudio/loop capturado. Estes parâmetros são globais.'],
   settings: ['O teu ponto de partida.', 'Presets no pedal e configurações globais. Operações destrutivas pedem confirmação.'],
@@ -205,7 +245,23 @@ function group(name, title, panelId) {
   controls.filter((c) => c.group === name).forEach((c) => grid.append(makeControl(c)));
   container.append(grid); $(`panel-${panelId}`).append(container);
 }
-controls.filter((c) => c.group === 'pedal').forEach((c) => (c.kind === 'range' ? $('pedal-knobs') : $('pedal-toggles')).append(makeControl(c, true)));
+function renderPedal() {
+  for (const controlViews of views.values()) {
+    for (const view of controlViews) {
+      if (view.physical && view.root.closest('#pedal-knobs, #pedal-toggles')) controlViews.delete(view);
+    }
+  }
+  $('pedal-knobs').replaceChildren();
+  $('pedal-toggles').replaceChildren();
+  const hidden = state[104] > 0;
+  document.querySelector('.pedal').classList.toggle('hidden-mode', hidden);
+  $('pedal-bank').textContent = `${context.stale.has(104) ? '~ ' : ''}${hidden ? 'HIDDEN · banco alternativo' : 'NORMAL · banco principal'}`;
+  controls.filter((c) => c.group === 'pedal').forEach((c) => {
+    const mapped = hidden ? controls.find((candidate) => candidate.cc === hiddenPedalMap[c.cc]) : c;
+    (c.kind === 'range' ? $('pedal-knobs') : $('pedal-toggles')).append(makeControl(mapped, true));
+  });
+}
+renderPedal();
 controls.filter((c) => c.group === 'footswitch').forEach((c) => $('footswitches').append(makeControl(c, true)));
 group('performance', '', 'performance');
 group('hidden', '', 'hidden');
@@ -230,15 +286,34 @@ function readSlot() {
   return Number(input.value);
 }
 function markUnknown() {
-  document.querySelector('.state-note strong').textContent = 'Estado não sincronizado após preset/reset.';
-  document.querySelector('.pedal').classList.add('unknown-state');
+  context.reason = 'Estado não sincronizado após preset/reset. Valores ~ são anteriores ao comando.';
+  context.stale = new Set(controls.filter((c) => 'initial' in c).map((c) => c.cc));
+  context.preset = '';
+  renderPedal();
+  controls.forEach(updateControl);
+  updatePreset();
+  updateStateNote();
+}
+function updatePreset() {
+  const select = $('physical-preset');
+  for (const option of [...select.options]) {
+    if (option.dataset.dynamic) option.remove();
+  }
+  if (!['0', '1', '2'].includes(context.preset)) {
+    const option = new Option(context.preset ? `PC · ${context.preset}` : 'NÃO SINCRONIZADO', context.preset);
+    option.dataset.dynamic = 'true';
+    option.disabled = true;
+    select.add(option);
+  }
+  select.value = context.preset;
 }
 function recall(slot) {
-  stopNotes();
+  if (!stopNotes()) { updatePreset(); return; }
   if (transmit(pcMessage(channel(), slot), slot ? `Carregar preset ${slot} · PC` : 'LIVE · PC0')) {
     markUnknown();
-    $('physical-preset').value = [0, 1, 2].includes(slot) ? String(slot) : '';
+    context.preset = String(slot);
   }
+  updatePreset();
 }
 $('recall-preset').onclick = () => { const slot = readSlot(); if (slot !== null) recall(slot); };
 $('live-preset').onclick = () => recall(0);
@@ -277,15 +352,21 @@ function noteOn(note, key) {
 }
 function noteOff(note) {
   const context = notes.get(note);
-  if (!context) return;
-  try {
-    sendMessage(context.output, noteMessage(context.channel, note, 0, false), context.demo);
-  } catch (error) {
-    notify(`Não foi possível parar a nota ${note}: ${error.message}. Volta a ligar a interface ou para a nota no pedal.`);
+  if (!context) return true;
+  if (!transmit(noteMessage(context.channel, note, 0, false), `Note Off ${note}`, context)) {
+    context.pending = true;
+    notify(`Não foi possível parar a nota ${note}. Volta a ligar a interface e usa “Parar notas ativas”, ou para a nota no pedal.`);
+    return false;
   }
   context.key.classList.remove('playing'); notes.delete(note);
+  if (![...notes.values()].some((note) => note.pending)) notify('');
+  return true;
 }
-function stopNotes() { [...notes.keys()].forEach(noteOff); }
+function stopNotes() {
+  let stopped = true;
+  for (const note of [...notes.keys()]) if (!noteOff(note)) stopped = false;
+  return stopped;
+}
 const noteNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B', 'C'];
 noteNames.forEach((name, index) => {
   const key = document.createElement('button');
@@ -311,11 +392,12 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) stopN
 function refreshOutputs() {
   const previous = $('output').value;
   const available = [...access.outputs.values()].filter((port) => port.state === 'connected');
-  if (!available.some((port) => port.id === previous)) stopNotes();
+  const stopped = available.some((port) => port.id === previous) || stopNotes();
   $('output').replaceChildren(new Option('Selecionar saída', ''));
   for (const port of available) $('output').add(new Option(port.name || port.id, port.id));
   $('output').value = available.some((port) => port.id === previous) ? previous : '';
-  if (previous && !$('output').value) notify('A saída MIDI foi desligada. Seleciona novamente a interface.');
+  if (previous && !$('output').value && stopped) notify('A saída MIDI foi desligada. Seleciona novamente a interface.');
+  if (previous !== $('output').value) switchContext();
   updateConnection();
 }
 $('connect').onclick = async () => {
@@ -328,13 +410,15 @@ $('connect').onclick = async () => {
     access = await navigator.requestMIDIAccess({ sysex: false });
     access.onstatechange = refreshOutputs;
     refreshOutputs();
-    notify($('output').options.length === 1 ? 'Nenhuma saída MIDI encontrada. Liga uma interface USB–MIDI e tenta novamente.' : 'Seleciona a saída MIDI. A ligação não envia valores automaticamente.');
+    if (![...notes.values()].some((note) => note.pending)) {
+      notify($('output').options.length === 1 ? 'Nenhuma saída MIDI encontrada. Liga uma interface USB–MIDI e tenta novamente.' : 'Seleciona a saída MIDI. A ligação não envia valores automaticamente.');
+    }
   } catch (error) {
     notify(`Acesso MIDI recusado ou indisponível: ${error.message}. Verifica as permissões do navegador.`);
   } finally { $('connect').disabled = false; }
 };
-$('output').onchange = () => { stopNotes(); updateConnection(); };
-$('channel').onchange = stopNotes;
-$('demo').onchange = () => { stopNotes(); updateConnection(); };
+$('output').onchange = () => { stopNotes(); switchContext(); updateConnection(); };
+$('channel').onchange = () => { stopNotes(); switchContext(); };
+$('demo').onchange = () => { stopNotes(); switchContext(); updateConnection(); };
 $('clear-log').onclick = () => { $('log').replaceChildren(); $('monitor-empty').hidden = false; };
 updateConnection();

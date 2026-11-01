@@ -92,7 +92,8 @@ h1 em{color:var(--accent);font-style:normal}
 .pedal-tip{text-align:center;font-size:11px;line-height:1.8;color:var(--muted);margin:8px 0 22px}
 .state-note{display:flex;gap:12px;align-items:start;border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--muted);font-size:11px;line-height:1.7}
 .state-note p{margin:0}.state-note strong{color:#d8c6e3;font-weight:500}
-.unknown-state .readout:before{content:"~ "}
+.stale .readout:before,.stale .cc-badge:before{content:"~ "}
+.hidden-mode{outline:2px solid #f2c2d2;outline-offset:4px}
 .control-area{padding:26px;min-height:600px}
 .panel-heading{display:flex;justify-content:space-between;align-items:center}
 .panel-heading .eyebrow{font-size:9px;margin-bottom:10px}

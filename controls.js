@@ -11,6 +11,8 @@ const action = (cc, name, group, value = 1, confirmation = '') =>
   ({ cc, name, group, kind: 'action', value, confirmation });
 const divisions = options('1/32', '1/16', '1/8 tercina', '1/8', '1/8 pontuada', '1/4', '1/2', '1');
 
+export const hiddenPedalMap = { 14: 24, 15: 25, 16: 26, 17: 27, 18: 28, 19: 29, 21: 31, 22: 32, 23: 33 };
+
 export const controls = [
   range(14, 'TIME', 'pedal', 64, 'Tempo do canal Wet. Sincronizado: 0–12 = 1/32; 13–36 = 1/16; 37–61 = tercina; 62–84 = 1/8; 85–110 = 1/8 pontuada; 111–127 = 1/4.'),
   range(15, 'MIX', 'pedal', 64, 'Mistura dry/wet. A função física RAMP tem o seu próprio CC20.'),
@@ -27,7 +29,7 @@ export const controls = [
   toggle(106, 'Overdub · Loop', 'performance'),
   action(107, 'Tap tempo', 'performance'),
   action(93, 'Tap tempo · CC legado', 'performance'),
-  toggle(104, 'Hidden menu', 'hidden', 'Ativa o menu oculto no pedal. Os controlos dedicados abaixo usam os seus próprios CC.'),
+  toggle(104, 'Hidden menu', 'hidden', 'Troca os controlos do pedal virtual para o banco Hidden. Ao sair, recupera os valores normais da interface, sem os reenviar.'),
   range(24, 'Stereo width · Wet', 'hidden'),
   select(25, 'Ramping waveform', 'hidden', [
     { value: 0, label: 'Triangular · 0–14' },
@@ -70,6 +72,9 @@ export const controls = [
 ];
 
 export function controlValueLabel(cc, value, state) {
+  if (cc === 25) {
+    return [[14, 'Triangular'], [54, 'Quadrada'], [80, 'Senoidal'], [126, 'S&H'], [127, 'Random']].find(([max]) => value <= max)[1];
+  }
   if (cc === 18) {
     const steps = [[4, '2k'], [15, '3k'], [28, '4k'], [40, '6k'], [53, '8k'], [69, '12k'], [83, '16k'], [95, '24k'], [109, '32k'], [121, '48k'], [127, '64k']];
     return `${steps.find(([max]) => value <= max)[1]} Hz`;

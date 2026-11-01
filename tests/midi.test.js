@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { controls, controlValueLabel } from '../controls.js';
+import { controls, controlValueLabel, hiddenPedalMap } from '../controls.js';
 import { ccMessage, pcMessage, noteMessage, sendMessage } from '../midi.js';
 
 test('every documented CC appears exactly once, including legacy tap and synth CC0', () => {
@@ -55,4 +55,11 @@ test('stepped sample rate and mode-dependent speed labels cover all CC values', 
   }
   assert.equal(controlValueLabel(18, 127, {}), '64k Hz');
   assert.equal(controlValueLabel(19, 70, { 23: 3 }), 'Stalled');
+});
+test('Hidden maps each physical position to its dedicated CC from the manual', () => {
+  assert.deepEqual(hiddenPedalMap, { 14: 24, 15: 25, 16: 26, 17: 27, 18: 28, 19: 29, 21: 31, 22: 32, 23: 33 });
+  for (const cc of Object.values(hiddenPedalMap)) assert.ok(controls.some((control) => control.cc === cc));
+  assert.equal(controlValueLabel(25, 54, {}), 'Quadrada');
+  assert.equal(controlValueLabel(25, 55, {}), 'Senoidal');
+  assert.equal(controlValueLabel(25, 127, {}), 'Random');
 });
