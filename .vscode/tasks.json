@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "MOOD: local preview",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"tools/serve.js"
+			],
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}
