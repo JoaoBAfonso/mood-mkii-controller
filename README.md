@@ -1,10 +1,16 @@
-# MOOD MKII · MIDI Studio
+# Chase Bliss · MIDI Studio
 
-Independent, Portuguese-language Web MIDI controller for the **Chase Bliss MOOD MKII** (not the original MOOD).
+Independent, Portuguese-language Web MIDI controllers for **MOOD MKII**, **Lost + Found (green)**, **Generation Loss MKII** and **BAD MOOD (Ink)**. Select a pedal on the landing page, open its dedicated controller, and use **Pedais** to return.
 
 **Website:** https://JoaoBAfonso.github.io/mood-mkii-controller/
 
 ## Features
+
+- Four dedicated, bookmarkable controller pages with model-specific CC maps, normal/Hidden/ALT banks, mode diagrams and original pedal illustrations.
+- MOOD MKII: 61 CCs; Lost + Found: 51; Generation Loss MKII: 41; BAD MOOD: 62. Commands are based on each model's manual, not inherited indiscriminately.
+- Green Lost + Found theme, blue VHS Generation Loss theme and monochrome patterned BAD MOOD Ink theme alongside the existing lavender MOOD.
+
+### MOOD MKII
 
 - Original CSS illustration matching the physical control layout: TIME / MIX / LENGTH, both MODIFY knobs, CLOCK, three toggles, preset toggle and footswitches.
 - All **61 documented CC numbers**, including hidden parameters, DIP switches, ramping, global settings, legacy tap tempo, preset saving and Synth controls.
@@ -28,7 +34,16 @@ To change the pedal's channel, hold both footswitches while powering it on and s
 
 ## MIDI source and limitations
 
-Mapping source: [official MOOD MKII MIDI manual](https://www.chasebliss.com/s/MOOD-MKII_MIDI-Manual_Pedal_Chase-Bliss.pdf), linked from the [manufacturer's manual archive](https://www.chasebliss.com/manuals).
+Mapping sources, linked from the [manufacturer's manual archive](https://www.chasebliss.com/manuals):
+
+| Pedal | MIDI reference | Controller |
+|---|---|---|
+| MOOD MKII | [Official MIDI manual](https://www.chasebliss.com/s/MOOD-MKII_MIDI-Manual_Pedal_Chase-Bliss.pdf) | [MOOD MKII](https://joaobafonso.github.io/mood-mkii-controller/controller.html?pedal=mood-mkii) |
+| Lost + Found | [Official MIDI manual](https://www.chasebliss.com/s/Lost-Found_MIDI-Manual_Pedal_Chase-Bliss.pdf) | [Lost + Found](https://joaobafonso.github.io/mood-mkii-controller/controller.html?pedal=lost-found) |
+| Generation Loss MKII | [Official MIDI manual](https://www.chasebliss.com/s/Generation-Loss-MKII_MIDI-Manual_Pedal_Chase-Blisspdf.pdf) | [Generation Loss MKII](https://joaobafonso.github.io/mood-mkii-controller/controller.html?pedal=generation-loss-mkii) |
+| BAD MOOD | [Official MIDI manual](https://www.chasebliss.com/s/BAD-MOOD_MIDI-Manual_Chase-Bliss.pdf) | [BAD MOOD Ink](https://joaobafonso.github.io/mood-mkii-controller/controller.html?pedal=bad-mood) |
+
+Each controller also links its complete manual. The existing MOOD features below describe MOOD MKII specifically; differences for the other models are listed separately.
 
 The manual does **not document SysEx or a state readback protocol**. This application does not request SysEx access, invent commands, read physical knob positions or claim bidirectional synchronization. Changes made on the physical pedal do not reach the site. Values are UI starting points/last successful sends, not hardware telemetry; a successful send does not mean the pedal acknowledged it. After recalling a preset or resetting, values from before the command are marked `~` in both the pedal and the command panels. Sending an individual CC removes that parameter's stale marker.
 
@@ -62,6 +77,20 @@ MIDI clock following/divisions can be configured; a DAW/controller must supply t
 
 Preset slots 1/2 match the right/left physical toggle. Saving overwrites hardware presets; no local preset file is implied. Destructive commands require confirmation. Save confirmation identifies and captures the exact slot, and confirmation is rejected if the destination changes.
 
+### Other pedal-specific behavior
+
+- **Lost + Found:** TIME/MODIFY on each side; centre MIX/BLEND. Hidden maps to ALT L/R, SPILL, EQ L/R, GLUE and SPREAD destination. CC25 is a continuous SPILL parameter, not a waveform. Three effect families per side contain A/B algorithms selected with MODIFY; the A/B buttons send 0/127 and Neutral sends 64. L SWAP/R SWAP replace a channel's effect families with those of the opposite side, exposing all twelve algorithms. BANK changes the physical preset selector's right/left targets to 3/4 (not the effect algorithms). MIDI PC slots remain 0–122. Random L/R/both commands mark values non-synchronized rather than inventing their resulting settings. Tap subdivisions include thirteen documented choices.
+- **Generation Loss MKII:** independent ALT values including AUX onset, ramp speed, bypass type, noise levels and input gain. **CC104 is inverted: 0 enters ALT; 1 exits.** The UI's ON/OFF indicates whether ALT is active, not whether the byte is nonzero. Toggle CC21/22/23 and input gain use 1/2/3. The model menu sends the thirteen exact documented CC16 points; arbitrary intermediate knob values are shown as raw CC values rather than assigning undocumented model boundaries. CLASSIC (CC72) relabels MODEL/LP, SATURATE/GEN, FAILURE/HP, retains their CC values and disables the model menu. FREEZE is available via Classic + AUX FAIL + DROP BYP/SNAG BYP. DSP bypass uses documented representative values 0/127; the unspecified boundary 64 is not emitted by that selector. No Synth, MIDI clock controls, tap tempo or factory reset are invented.
+- **BAD MOOD Ink:** SOUP/RELAY/FLIP and BURST/RADIO/MASK mode cards; Hidden CROSS/BALANCE/FADE/EQ/GLUE/BLEND, master volume and CROSS input. CC25 is continuous BALANCE and CC33 chooses CROSS source, not the MOOD waveform/buffer controls. The RADIO menu sends the five official station points; raw scan values remain available. FLIP exposes all 48 official CC17 chord intervals as numbered choices, with exact boundary labels, without guessing their voicings. Its clock divisions include nine choices distinct from MOOD's. Synth controls, EQ destination and its own DIP map are included.
+
+### Navigation and safety
+
+Routes use `controller.html?pedal=...`, so bookmarks and browser back/forward work on static GitHub Pages without server rewrites. Unknown model identifiers show an explicit error and no controller.
+
+No model is detected automatically. Opening a page or choosing another pedal requests no MIDI permission and sends no values. Each newly opened controller starts with its own UI values and requires output/channel selection; values are not migrated between pedal models. Back/forward may restore a previous page's last UI state through the browser's page cache; this is still not telemetry. Normal/Hidden view navigation never replays a bank. Leaving via **Pedais** releases active notes on their original destination and blocks the navigation if Note Off fails; browser unload also attempts release and requests confirmation on failure.
+
+MIDI tests use mocked outputs only. Real pedal reception, firmware behavior and physical appearance have not been verified on hardware.
+
 ## Development
 
 Node.js 22 or later:
@@ -81,9 +110,11 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-The tests use a mocked MIDI output; they do not send anything to physical hardware. They cover mouse/keyboard tab bank selection without MIDI sends, Hidden bank restoration and correct bytes, mode diagram selection, local font loading, state isolation, failed sends, presets/confirmation, retryable note releases, control coverage, input validation and mobile layouts.
+The tests use a mocked MIDI output; they do not send anything to physical hardware. They cover exact CC lists for all models, select/DIP/action bytes, model points and chord boundaries, selector/history navigation, bank restoration, per-model ALT semantics, original MOOD regressions, state isolation, failed sends, presets/confirmation, retryable note releases, control coverage, input validation and mobile/tablet/desktop layouts.
 
-GitHub Pages deployment runs the MIDI and browser tests and publishes the six static site files plus the local font assets from the `main` branch through [the workflow](.github/workflows/pages.yml). Enable Pages with **GitHub Actions** as the source. Versioned asset URLs prevent a freshly loaded release from mixing new scripts with cached old modules; bump the asset query versions together when publishing incompatible changes.
+The shared engine is [app.js](app.js), pedal descriptors and model-specific behavior are in [pedals.js](pedals.js), and the original MOOD map remains in [controls.js](controls.js). [index.html](index.html) / [studio.js](studio.js) implement selection, and [controller.html](controller.html) is the common accessible controller template.
+
+GitHub Pages deployment runs the MIDI and browser tests and publishes all static site modules/pages plus the local font assets from the `main` branch through [the workflow](.github/workflows/pages.yml). Enable Pages with **GitHub Actions** as the source. Versioned asset URLs prevent a freshly loaded release from mixing new scripts with cached old modules; bump the asset query versions together when publishing incompatible changes.
 
 ## Visual reference
 

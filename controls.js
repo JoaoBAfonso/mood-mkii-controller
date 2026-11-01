@@ -1,13 +1,13 @@
 export const manualUrl = 'https://www.chasebliss.com/s/MOOD-MKII_MIDI-Manual_Pedal_Chase-Bliss.pdf';
-const options = (...labels) => labels.map((label, value) => ({ label, value }));
-const three = (...labels) => labels.map((label, index) => ({ label, value: [0, 2, 3][index] }));
-const range = (cc, name, group, initial = 64, hint = '') =>
+export const options = (...labels) => labels.map((label, value) => ({ label, value }));
+export const three = (...labels) => labels.map((label, index) => ({ label, value: [0, 2, 3][index] }));
+export const range = (cc, name, group, initial = 64, hint = '') =>
   ({ cc, name, group, kind: 'range', min: 0, max: 127, initial, hint });
-const select = (cc, name, group, choices, initial = choices[0].value, hint = '') =>
+export const select = (cc, name, group, choices, initial = choices[0].value, hint = '') =>
   ({ cc, name, group, kind: 'select', choices, initial, hint });
-const toggle = (cc, name, group, hint = '') =>
+export const toggle = (cc, name, group, hint = '') =>
   ({ cc, name, group, kind: 'toggle', initial: 0, hint });
-const action = (cc, name, group, value = 1, confirmation = '') =>
+export const action = (cc, name, group, value = 1, confirmation = '') =>
   ({ cc, name, group, kind: 'action', value, confirmation });
 const divisions = options('1/32', '1/16', '1/8 tercina', '1/8', '1/8 pontuada', '1/4', '1/2', '1');
 

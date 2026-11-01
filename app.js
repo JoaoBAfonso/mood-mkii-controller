@@ -1,7 +1,37 @@
-import { controls, controlValueLabel, manualUrl, hiddenPedalMap } from './controls.js?v=1.2.0';
-import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=1.2.0';
+import { getPedal } from './pedals.js?v=2.0.0';
+import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=2.0.0';
 
 const $ = (id) => document.getElementById(id);
+const pedal = getPedal(new URLSearchParams(location.search).get('pedal'));
+if (!pedal) {
+  document.querySelector('main').replaceChildren();
+  const error = document.createElement('p');
+  error.textContent = 'Pedal desconhecido. Volta à seleção para escolher um modelo. Nenhum comando foi enviado.';
+  const back = document.createElement('a'); back.href = './'; back.textContent = '← Selecionar pedal';
+  document.querySelector('main').append(error, back);
+  throw new Error('Modelo de pedal inválido.');
+}
+const { controls, label: controlValueLabel, manualUrl, hiddenMap: hiddenPedalMap } = pedal;
+document.body.classList.add(`theme-${pedal.id}`);
+document.body.dataset.pedal = pedal.id;
+document.title = `${pedal.name} · MIDI Studio`;
+$('pedal-title').append(document.createTextNode(pedal.title));
+if (pedal.edition) {
+  const mark = document.createElement('span'); mark.className = 'model-mark'; mark.textContent = pedal.edition;
+  $('pedal-title').append(document.createTextNode(' '), mark);
+}
+$('pedal-subtitle').textContent = pedal.subtitle;
+$('pedal-logo').textContent = pedal.title;
+$('pedal-category').textContent = pedal.category;
+$('panel-title').textContent = pedal.category;
+$('pedal-edition').textContent = `Web MIDI · ${pedal.variant}`;
+$('pedal-bottom').textContent = `${pedal.name} · MIDI STUDIO`;
+$('model-note').textContent = pedal.note;
+$('main-manual-link').href = pedal.mainManualUrl;
+document.querySelector('.pedal-area').setAttribute('aria-label', `Controlos físicos do ${pedal.name}`);
+if (!pedal.synth) $('tab-synth').remove();
+if (pedal.id !== 'mood-mkii' && pedal.id !== 'bad-mood') $('tab-hidden').textContent = 'ALT';
+const isOn = (control) => control.onValue === 0 ? state[control.cc] === 0 : state[control.cc] > 0;
 const initialState = () => Object.fromEntries(controls.filter((c) => 'initial' in c).map((c) => [c.cc, c.initial]));
 const contexts = new Map();
 let context = { values: initialState(), stale: new Set(), preset: '0', reason: '' };
@@ -75,30 +105,37 @@ function updateControl(control) {
   for (const view of controlViews) {
     view.root.classList.toggle('stale', context.stale.has(control.cc));
     if (view.input) {
-      view.input.value = control.cc === 25 && view.input.tagName === 'SELECT'
+      view.input.value = control.cc === pedal.waveformCc && view.input.tagName === 'SELECT'
         ? [...control.choices].reverse().find((option) => value >= option.value).value : value;
     }
     if (view.numeric) view.numeric.value = value;
-    if (view.knob) view.knob.style.setProperty('--rotation', `${-135 + value / 127 * 270}deg`);
+    if (view.knob) {
+      const visual = control.kind === 'select' && control.cc !== pedal.waveformCc ? control.choices.findIndex((choice) => choice.value === value) / (control.choices.length - 1) : value / 127;
+      view.knob.style.setProperty('--rotation', `${-135 + visual * 270}deg`);
+    }
     if (view.readout) view.readout.textContent = `${controlValueLabel(control.cc, value, state)} · ${value}`;
     if (view.button) {
-      view.button.setAttribute('aria-pressed', String(value > 0));
-      view.button.classList.toggle('active', value > 0);
-      view.button.querySelector('.toggle-state').textContent = value > 0 ? 'ON' : 'OFF';
+      view.button.setAttribute('aria-pressed', String(isOn(control)));
+      view.button.classList.toggle('active', isOn(control));
+      view.button.querySelector('.toggle-state').textContent = isOn(control) ? 'ON' : 'OFF';
     }
   }
 }
 function change(control, value) {
-  if (control.cc === 18 && !stopNotes()) { updateControl(control); return; }
+  if (control.cc === pedal.clockCc && !stopNotes()) { updateControl(control); return; }
   if (transmit(ccMessage(channel(), control.cc, value), `${control.name} · CC${control.cc} = ${value}`)) {
     state[control.cc] = value;
     context.stale.delete(control.cc);
     updateControl(control);
-    if (control.cc === 23) updateControl(controls.find((c) => c.cc === 19));
-    if (control.cc === 104) {
-      visibleBank = value > 0 ? 'hidden' : 'normal';
+    if ([21, 23, 72].includes(control.cc)) {
+      for (const cc of [16, 17, 18, 19]) updateControl(controls.find((c) => c.cc === cc));
+    }
+    if (control.cc === pedal.hiddenCc) {
+      visibleBank = value === pedal.hiddenOff ? 'normal' : 'hidden';
       renderPedal();
     }
+    if ([72, 74, 75].includes(control.cc)) renderPedal();
+    if (control.cc === 78 && pedal.id === 'lost-found') updatePreset();
     updateModeIllustrations();
   } else updateControl(control);
 }
@@ -116,7 +153,7 @@ function confirmCommand(message, callback) {
   };
   $('confirm-dialog').showModal();
 }
-function makeControl(control, physical = false) {
+function makeControl(control, physical = false, position = control.cc) {
   const root = document.createElement('div');
   root.className = `control ${physical ? 'physical-control' : ''} ${control.kind}`;
   root.dataset.cc = control.cc;
@@ -124,14 +161,17 @@ function makeControl(control, physical = false) {
   const id = `${physical ? 'pedal-' : ''}cc-${control.cc}`;
   label.htmlFor = id;
   const name = document.createElement('span');
-  name.textContent = control.name;
+  name.textContent = pedal.id === 'generation-loss-mkii' && visibleBank === 'normal' && state[72]
+    ? ({ 16: 'LOW PASS', 18: 'GENERATION', 19: 'HIGH PASS' }[control.cc] || control.name) : control.name;
   const badge = document.createElement('small');
   badge.className = 'cc-badge';
   badge.textContent = `CC ${control.cc}`;
   label.append(name, badge);
   root.append(label);
   const view = { root, physical };
-  const steppedKnob = physical && control.cc === 25;
+  const steppedKnob = physical && (control.cc === pedal.waveformCc || (position >= 14 && position <= 19 && control.kind === 'select'));
+  const knobValue = (raw) => steppedKnob && control.cc !== pedal.waveformCc
+    ? control.choices.reduce((best, choice) => Math.abs(choice.value - raw) < Math.abs(best.value - raw) ? choice : best).value : raw;
   if (control.kind === 'range' || steppedKnob) {
     if (physical) {
       const knob = document.createElement('div');
@@ -143,7 +183,7 @@ function makeControl(control, physical = false) {
         if (event.button !== 0) return;
         const startX = event.clientX, startY = event.clientY, start = state[control.cc];
         knob.setPointerCapture(event.pointerId);
-        const move = (e) => change(control, Math.max(0, Math.min(127, Math.round(start + (e.clientX - startX + startY - e.clientY) / 1.5))));
+        const move = (e) => change(control, knobValue(Math.max(0, Math.min(127, Math.round(start + (e.clientX - startX + startY - e.clientY) / 1.5)))));
         const stop = () => {
           knob.removeEventListener('pointermove', move);
           knob.removeEventListener('lostpointercapture', stop);
@@ -156,13 +196,18 @@ function makeControl(control, physical = false) {
     }
     const input = document.createElement('input');
     input.type = 'range'; input.min = 0; input.max = 127; input.id = id;
-    input.addEventListener('input', () => change(control, Number(input.value)));
+    input.addEventListener('input', () => change(control, knobValue(Number(input.value))));
     const numeric = document.createElement('input');
     numeric.type = 'number'; numeric.min = 0; numeric.max = 127; numeric.step = 1;
     numeric.setAttribute('aria-label', `${control.name} valor CC`);
     numeric.addEventListener('change', () => {
       if (!numeric.validity.valid || numeric.value === '') {
         notify('O valor CC tem de ser um número inteiro entre 0 e 127.');
+        updateControl(control);
+        return;
+      }
+      if (steppedKnob && control.cc !== pedal.waveformCc && !control.choices.some((choice) => choice.value === Number(numeric.value))) {
+        notify('Escolhe um dos valores documentados no menu deste parâmetro.');
         updateControl(control);
         return;
       }
@@ -188,7 +233,7 @@ function makeControl(control, physical = false) {
     button.type = 'button';
     button.setAttribute('aria-label', `${control.name} CC${control.cc}`);
     button.innerHTML = physical ? '<span class="led"></span><span class="metal-switch"></span><span class="toggle-state">OFF</span>' : '<span class="switch-track"></span><span class="toggle-state">OFF</span>';
-    button.addEventListener('click', () => change(control, state[control.cc] ? 0 : 1));
+    button.addEventListener('click', () => change(control, isOn(control) ? (control.offValue ?? 0) : (control.onValue ?? 1)));
     root.append(button);
     view.button = button;
   } else {
@@ -204,7 +249,7 @@ function makeControl(control, physical = false) {
           transmit(ccMessage(channel(), 111, slot), `Guardar preset ${slot} · CC111`);
         } else {
           if ([59, 56, 110].includes(control.cc) && !stopNotes()) return;
-          if (transmit(ccMessage(channel(), control.cc, control.value), `${control.name} · CC${control.cc}`) && [56, 110].includes(control.cc)) markUnknown();
+          if (transmit(ccMessage(channel(), control.cc, control.value), `${control.name} · CC${control.cc}`) && [56, 110, 112, 113, 114].includes(control.cc)) markUnknown();
         }
       };
       if (control.confirmation) {
@@ -224,13 +269,14 @@ function makeControl(control, physical = false) {
   return root;
 }
 const panelDescriptions = {
-  performance: ['Toca no momento.', 'Freeze, overdub e tap tempo sem procurar nos menus.'],
+  performance: ['Toca no momento.', 'Escolhe os modos e encontra os comandos de performance específicos deste pedal.'],
   hidden: ['Hidden controls.', 'Este separador mostra o banco Hidden sem enviar MIDI. O botão CC104 abaixo muda o modo no hardware; os parâmetros dedicados funcionam em ambos os modos.'],
   dips: ['Movimento e personalidade.', 'Os DIP switches correspondem à ordem física, vistos por cima do pedal.'],
   synth: ['Transforma texturas em notas.', 'Note On entra no modo Synth. Usa o teclado abaixo; o pedal precisa de áudio/loop capturado. Estes parâmetros são globais.'],
   settings: ['O teu ponto de partida.', 'Presets no pedal e configurações globais. Operações destrutivas pedem confirmação.'],
 };
 for (const [id, [title, description]] of Object.entries(panelDescriptions)) {
+  if (id === 'synth' && !pedal.synth) continue;
   const panel = document.createElement('section');
   panel.id = `panel-${id}`;
   panel.setAttribute('role', 'tabpanel');
@@ -263,10 +309,10 @@ function renderPedal() {
   const hidden = visibleBank === 'hidden';
   document.querySelector('.pedal').classList.toggle('hidden-mode', hidden);
   $('pedal-bank').textContent = hidden ? 'HIDDEN · banco alternativo' : 'NORMAL · banco principal';
-  $('bank-description').textContent = `Vista ${hidden ? 'Hidden' : 'normal'} · CC104 ${context.stale.has(104) ? 'não sincronizado' : state[104] > 0 ? 'ON' : 'OFF'}${demo() ? ' (demo)' : ' (último estado da interface)'}. Mudar de separador não envia CC104.`;
+  $('bank-description').textContent = `Vista ${hidden ? 'Hidden / ALT' : 'normal'} · CC104 ${context.stale.has(104) ? 'não sincronizado' : state[104] === pedal.hiddenOn ? 'ON' : 'OFF'}${demo() ? ' (demo)' : ' (último estado da interface)'}. Mudar de separador não envia CC104.`;
   controls.filter((c) => c.group === 'pedal').forEach((c) => {
-    const mapped = hidden ? controls.find((candidate) => candidate.cc === hiddenPedalMap[c.cc]) : c;
-    const element = makeControl(mapped, true);
+    const mapped = hidden && hiddenPedalMap[c.cc] !== undefined ? controls.find((candidate) => candidate.cc === hiddenPedalMap[c.cc]) : c;
+    const element = makeControl(mapped, true, c.cc);
     element.dataset.position = c.cc;
     (c.kind === 'range' ? $('pedal-knobs') : $('pedal-toggles')).append(element);
   });
@@ -278,7 +324,7 @@ group('hidden', '', 'hidden');
 group('ramping', 'Ramping', 'dips');
 group('dip-left', 'Banco esquerdo · Ramping / Expression', 'dips');
 group('dip-right', 'Banco direito · Customize', 'dips');
-group('synth', '', 'synth');
+if (pedal.synth) group('synth', '', 'synth');
 group('global', 'Configurações globais', 'settings');
 
 const presetSection = document.createElement('div');
@@ -296,7 +342,7 @@ function readSlot() {
   return Number(input.value);
 }
 function markUnknown() {
-  context.reason = 'Estado não sincronizado após preset/reset. Valores ~ são anteriores ao comando.';
+  context.reason = 'Estado não sincronizado após preset/reset/Random. Valores ~ são anteriores ao comando.';
   context.stale = new Set(controls.filter((c) => 'initial' in c).map((c) => c.cc));
   context.preset = '';
   renderPedal();
@@ -307,10 +353,18 @@ function markUnknown() {
 }
 function updatePreset() {
   const select = $('physical-preset');
+  if (pedal.id === 'lost-found') {
+    const bank = state[78] > 0;
+    for (const option of [...select.options].filter((item) => !item.dataset.dynamic && item.value !== '0')) {
+      const left = option.textContent.startsWith('LEFT');
+      option.value = String((left ? 2 : 1) + (bank ? 2 : 0));
+      option.textContent = `${left ? 'LEFT' : 'RIGHT'} · ${option.value}`;
+    }
+  }
   for (const option of [...select.options]) {
     if (option.dataset.dynamic) option.remove();
   }
-  if (!['0', '1', '2'].includes(context.preset)) {
+  if (![...select.options].some((option) => option.value === context.preset)) {
     const option = new Option(context.preset ? `PC · ${context.preset}` : 'NÃO SINCRONIZADO', context.preset);
     option.dataset.dynamic = 'true';
     option.disabled = true;
@@ -355,22 +409,15 @@ tabs.forEach((button, index) => {
   };
 });
 
-const modeIllustrations = [
-  { cc: 21, value: 0, name: 'REVERB', summary: 'Um espaço que se abre.', description: 'TIME define o tamanho e o decaimento do espaço. MODIFY difunde os ecos, de multi-tap a reverb.', drawing: '<path d="M18 35h12m8-15q18 15 0 30m14-38q28 23 0 46m14-54q37 31 0 62"/><circle cx="24" cy="35" r="4"/>' },
-  { cc: 21, value: 2, name: 'DELAY', summary: 'Ecos que se encontram.', description: 'TIME espaça as repetições. MODIFY controla o feedback, de ecos curtos a repetições persistentes.', drawing: '<path d="M12 52V18h12v34h16V25h12v27h16V32h12v20h16V39h12v13"/>' },
-  { cc: 21, value: 3, name: 'SLIP', summary: 'Tempo, direção e altura.', description: 'Uma janela de áudio percorre o som. MODIFY altera a velocidade e a direção da reprodução.', drawing: '<path d="M14 45h88m-75-6V19h20v20m9 0V12h20v27m9 0V25h12v14M32 58h55m-6-5 6 5-6 5M25 8l-8 8 8 8"/>' },
-  { cc: 23, value: 0, name: 'ENV', summary: 'Pequenos fragmentos vivos.', description: 'LENGTH escolhe o tamanho dos fragmentos. MODIFY regula a sensibilidade ao teu toque.', drawing: '<path d="M10 52h96M14 50l9-29 9 29m10 0 9-40 9 40m10 0 9-22 9 22m10 0 6-15"/>' },
-  { cc: 23, value: 2, name: 'TAPE', summary: 'Um loop em movimento.', description: 'LENGTH define o loop. MODIFY muda a velocidade e permite tocar o som para a frente ou ao contrário.', drawing: '<circle cx="35" cy="35" r="20"/><circle cx="82" cy="35" r="20"/><circle cx="35" cy="35" r="5"/><circle cx="82" cy="35" r="5"/><path d="M35 15h47M35 55h47m-56-28 18 16m29-16 18 16"/>' },
-  { cc: 23, value: 3, name: 'STRETCH', summary: 'De um instante, uma paisagem.', description: 'LENGTH define os fragmentos. MODIFY estica o áudio, muda a direção e pode parar o movimento.', drawing: '<path d="M12 50V25h10v25h9V16h16v34h10V25h22v25h12V16h17v34M12 60h96m-89-5-7 5 7 5m82-10 7 5-7 5"/>' },
-];
+const modeIllustrations = pedal.modes;
 function svgDrawing(drawing) {
   return `<svg viewBox="0 0 120 72" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${drawing}</svg>`;
 }
 function createModeIllustrations() {
   const section = document.createElement('section');
   section.className = 'mode-section';
-  section.setAttribute('aria-label', 'Modos dos dois canais');
-  for (const [cc, title] of [[21, 'Wet channel'], [23, 'Micro-looper channel']]) {
+  section.setAttribute('aria-label', 'Modos e funções do pedal');
+  for (const [cc, title] of pedal.modeGroups) {
     const channelSection = document.createElement('div');
     channelSection.className = `mode-channel ${cc === 21 ? 'wet-channel' : 'loop-channel'}`;
     const heading = document.createElement('h4');
@@ -390,6 +437,7 @@ function createModeIllustrations() {
     channelSection.append(heading, grid, description); section.append(channelSection);
   }
   $('panel-performance').insertBefore(section, $('panel-performance').querySelector('.control-group'));
+  if (!pedal.waveformCc) return;
   const hiddenDiagram = document.createElement('section');
   hiddenDiagram.className = 'hidden-diagram';
   hiddenDiagram.setAttribute('aria-label', 'Forma de onda do ramping');
@@ -398,31 +446,117 @@ function createModeIllustrations() {
 }
 function updateModeIllustrations() {
   if (!$('mode-description-21')) return;
-  for (const cc of [21, 23]) {
+  for (const [cc] of pedal.modeGroups) {
     const selected = modeIllustrations.find((mode) => mode.cc === cc && mode.value === state[cc]);
     $(`mode-description-${cc}`).textContent = `${context.stale.has(cc) ? 'Último modo da interface (~): ' : ''}${selected.description}`;
     document.querySelectorAll(`[data-mode-cc="${cc}"]`).forEach((button) => {
       button.setAttribute('aria-pressed', String(Number(button.dataset.modeValue) === state[cc]));
       button.classList.toggle('stale', context.stale.has(cc));
+      if (pedal.modePresentation) {
+        const presentation = pedal.modePresentation({ ...state, [cc]: Number(button.dataset.modeValue) }, cc);
+        button.setAttribute('aria-label', `Selecionar ${presentation.name} · ${cc === 21 ? 'L' : 'R'}`);
+        button.innerHTML = `${svgDrawing(presentation.drawing)}<strong>${presentation.name}</strong><span>${presentation.summary}</span>`;
+      }
     });
+    if (pedal.modePresentation) {
+      const presentation = pedal.modePresentation(state, cc);
+      $(`mode-description-${cc}`).textContent = `${context.stale.has(cc) ? 'Último modo (~): ' : ''}${presentation.description}`;
+    }
   }
-  const waveform = state[25];
-  $('ramp-wave-name').textContent = `Ramping · ${controlValueLabel(25, waveform, state)}${context.stale.has(25) ? ' (~)' : ''}`;
-  $('ramp-wave').setAttribute('d', waveform < 15 ? 'M10 55 35 15 60 55 85 15 110 55'
-    : waveform < 55 ? 'M10 55h20V15h25v40h25V15h30'
-    : waveform < 81 ? 'M10 35Q22 0 35 35T60 35T85 35T110 35'
-    : waveform < 127 ? 'M10 55h20V25h20v15h20V10h20v45h20'
-    : 'M10 40Q23 65 35 30T60 25T85 40T110 15');
-  const wet = controls.find((c) => c.cc === 21).choices.find((choice) => choice.value === state[21]).label;
-  const loop = controls.find((c) => c.cc === 23).choices.find((choice) => choice.value === state[23]).label;
-  $('signal-flow').textContent = `${context.stale.has(22) || context.stale.has(21) || context.stale.has(23) ? '~ ' : ''}${state[22] === 0 ? 'IN' : state[22] === 2 ? `IN + LOOP (${loop})` : `LOOP (${loop})`} → WET (${wet}) → OUT`;
+  if (pedal.waveformCc) {
+    const waveform = state[pedal.waveformCc];
+    $('ramp-wave-name').textContent = `Ramping · ${controlValueLabel(pedal.waveformCc, waveform, state)}${context.stale.has(pedal.waveformCc) ? ' (~)' : ''}`;
+    $('ramp-wave').setAttribute('d', waveform < 15 ? 'M10 55 35 15 60 55 85 15 110 55'
+      : waveform < 55 ? 'M10 55h20V15h25v40h25V15h30'
+      : waveform < 81 ? 'M10 35Q22 0 35 35T60 35T85 35T110 35'
+      : waveform < 127 ? 'M10 55h20V25h20v15h20V10h20v45h20'
+      : 'M10 40Q23 65 35 30T60 25T85 40T110 15');
+  }
+  if (pedal.id === 'mood-mkii') {
+    const wet = controls.find((c) => c.cc === 21).choices.find((choice) => choice.value === state[21]).label;
+    const loop = controls.find((c) => c.cc === 23).choices.find((choice) => choice.value === state[23]).label;
+    $('signal-flow').textContent = `${context.stale.has(22) || context.stale.has(21) || context.stale.has(23) ? '~ ' : ''}${state[22] === 0 ? 'IN' : state[22] === 2 ? `IN + LOOP (${loop})` : `LOOP (${loop})`} → WET (${wet}) → OUT`;
+  } else $('signal-flow').textContent = `${[21, 22, 23, 72].some((cc) => context.stale.has(cc)) ? '~ ' : ''}${pedal.signal(state)}`;
+  updateModeTools();
 }
 createModeIllustrations();
+function createModeTools() {
+  const section = document.createElement('section');
+  section.id = 'mode-tools'; section.className = 'mode-tools';
+  const addMenu = (id, title, choices, cc) => {
+    const label = document.createElement('label'); label.textContent = title;
+    const input = document.createElement('select'); input.id = id;
+    choices.forEach((choice) => input.add(new Option(choice.label, String(choice.value))));
+    input.onchange = () => change(controls.find((control) => control.cc === cc), Number(input.value));
+    label.append(input); section.append(label);
+  };
+  if (pedal.models) {
+    addMenu('model-select', 'Modelos de fita · CC16', pedal.models, 16);
+    const classic = document.createElement('button'); classic.id = 'classic-shortcut';
+    classic.textContent = 'Classic · CC72';
+    classic.onclick = () => change(controls.find((control) => control.cc === 72), state[72] ? 0 : 1);
+    section.append(classic);
+  }
+  if (pedal.stations) addMenu('station-select', 'RADIO · estações CC19', pedal.stations, 19);
+  if (pedal.chords) addMenu('chord-select', 'FLIP · acordes CC17', pedal.chords, 17);
+  if (pedal.effects) {
+    for (const [modeCc, modifyCc] of [[21, 17], [23, 19]]) {
+      const row = document.createElement('div'); row.className = 'effect-row';
+      const heading = document.createElement('h4'); heading.id = `effect-title-${modeCc}`; row.append(heading);
+      for (const value of [0, 64, 127]) {
+        const button = document.createElement('button');
+        button.dataset.effectCc = modeCc; button.dataset.modifyValue = value;
+        button.onclick = () => change(controls.find((control) => control.cc === modifyCc), value);
+        row.append(button);
+      }
+      const hint = document.createElement('p'); hint.className = 'hint';
+      hint.textContent = 'Escolhe A/B, depois ajusta MODIFY para a intensidade. Para aceder às famílias do outro canal, usa L SWAP ou R SWAP em DIP / Ramp.';
+      row.append(hint); section.append(row);
+    }
+  }
+  if (section.children.length) $('panel-performance').insertBefore(section, $('panel-performance').querySelector('.control-group'));
+}
+function updateModeTools() {
+  const syncMenu = (id, cc, disabled = false, intervals = false) => {
+    const input = $(id);
+    if (!input) return;
+    input.querySelector('[data-dynamic]')?.remove();
+    input.disabled = disabled;
+    const value = intervals ? pedal.chords.findLast((chord) => chord.value <= state[cc]).value : state[cc];
+    if (![...input.options].some((option) => Number(option.value) === value)) {
+      const option = new Option(`CC ${value} · valor atual`, String(value)); option.dataset.dynamic = 'true'; option.disabled = true;
+      input.add(option);
+    }
+    input.value = value;
+    input.classList.toggle('stale', context.stale.has(cc));
+  };
+  syncMenu('model-select', 16, state[72] > 0);
+  syncMenu('station-select', 19, state[23] !== 2);
+  syncMenu('chord-select', 17, state[21] !== 3, true);
+  if ($('classic-shortcut')) {
+    $('classic-shortcut').setAttribute('aria-pressed', String(state[72] > 0));
+    $('classic-shortcut').classList.toggle('stale', context.stale.has(72));
+  }
+  if (pedal.effects) {
+    for (const [cc, modify] of [[21, 17], [23, 19]]) {
+      const family = pedal.effects(state, cc);
+      const current = state[modify] < 64 ? 0 : state[modify] > 64 ? 127 : 64;
+      $(`effect-title-${cc}`).textContent = `${cc === 21 ? 'L' : 'R'} · ${family[0]} · ${current === 64 ? 'Neutral' : family[current === 0 ? 1 : 2]}`;
+      document.querySelectorAll(`[data-effect-cc="${cc}"]`).forEach((button) => {
+        const value = Number(button.dataset.modifyValue);
+        button.textContent = value === 64 ? 'Neutral' : `${value === 0 ? 'A' : 'B'} · ${family[value === 0 ? 1 : 2]}`;
+        button.setAttribute('aria-pressed', String(current === value));
+        button.classList.toggle('stale', context.stale.has(cc) || context.stale.has(modify));
+      });
+    }
+  }
+}
+createModeTools();
 updateModeIllustrations();
 const keyboard = document.createElement('div');
 keyboard.className = 'keyboard-section';
 keyboard.innerHTML = '<h4>Teclado · C4–C5</h4><label class="velocity-label">Velocidade <input id="velocity" type="range" min="1" max="127" value="100"></label><div class="keyboard" id="keyboard"></div><button id="stop-notes" class="text-button">Parar notas ativas</button><p class="hint">Clica e mantém premido, ou usa Espaço/Enter com uma tecla focada. Sem síntese de áudio no navegador.</p>';
-$('panel-synth').prepend(keyboard);
+if (pedal.synth) $('panel-synth').prepend(keyboard);
 function noteOn(note, key) {
   if (notes.has(note)) return;
   const context = { output: output(), channel: channel(), demo: demo(), key };
@@ -448,7 +582,7 @@ function stopNotes() {
   return stopped;
 }
 const noteNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B', 'C'];
-noteNames.forEach((name, index) => {
+if (pedal.synth) noteNames.forEach((name, index) => {
   const key = document.createElement('button');
   const note = 60 + index;
   key.className = name.includes('♯') ? 'black-key' : 'white-key';
@@ -465,9 +599,13 @@ noteNames.forEach((name, index) => {
   key.onblur = () => noteOff(note);
   $('keyboard').append(key);
 });
-$('stop-notes').onclick = stopNotes;
+if (pedal.synth) $('stop-notes').onclick = stopNotes;
+$('back-pedals').onclick = (event) => { if (!stopNotes()) event.preventDefault(); };
 window.addEventListener('blur', stopNotes);
 window.addEventListener('pagehide', stopNotes);
+window.addEventListener('beforeunload', (event) => {
+  if (!stopNotes()) { event.preventDefault(); event.returnValue = ''; }
+});
 document.addEventListener('visibilitychange', () => { if (document.hidden) stopNotes(); });
 function refreshOutputs() {
   const previous = $('output').value;

@@ -4,69 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#43234f">
-  <meta name="description" content="Controlador Web MIDI independente para o Chase Bliss MOOD MKII. Pedal visual, todos os CC documentados, presets e Synth.">
-  <title>MOOD MKII · MIDI Studio</title>
+  <meta name="description" content="MIDI Studio independente para MOOD MKII, Lost + Found, Generation Loss MKII e BAD MOOD Ink da Chase Bliss.">
+  <title>Escolhe o teu pedal · MIDI Studio</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/fonts/outfit-variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=1.2.0">
-  <script type="module" src="app.js?v=1.2.0"></script>
+  <link rel="stylesheet" href="styles.css?v=2.0.0">
+  <script type="module" src="studio.js?v=2.0.0"></script>
 </head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="./"><span class="brand-icon">m</span> MOOD <span> / MIDI STUDIO</span></a>
-    <a class="manual-link" id="manual-link" target="_blank" rel="noreferrer">Manual MIDI ↗</a>
-  </header>
+<body class="selection-page">
+  <header class="topbar"><a class="brand" href="./"><span class="brand-icon">m</span> MIDI STUDIO</a><a class="manual-link" href="https://github.com/JoaoBAfonso/mood-mkii-controller" target="_blank" rel="noreferrer">Código no GitHub ↗</a></header>
   <main>
-    <section class="intro">
-      <div><p class="eyebrow">UM GUIA INTERATIVO / MIDI STUDIO</p><h1>MOOD <span class="model-mark">MKII</span></h1><p class="subtitle">Um instante de som.<br><em>Todo um universo para explorar.</em></p></div>
-      <div class="intro-art" aria-hidden="true"><span></span><span></span><i></i></div>
-      <span class="edition">CONTROLADOR INDEPENDENTE<br><strong>Web MIDI · MKII only</strong></span>
-    </section>
-    <section class="connection card" aria-label="Ligação MIDI">
-      <div class="connection-heading"><span class="status-dot" id="status-dot"></span><div><strong id="connection-status">Não ligado</strong><small id="connection-detail">Nenhum comando enviado ao pedal</small></div></div>
-      <button id="connect" class="primary">Ligar MIDI <span>↗</span></button>
-      <label class="compact">Saída MIDI<select id="output"><option value="">Selecionar saída</option></select></label>
-      <label class="compact channel">Canal<select id="channel"></select></label>
-      <label class="demo-switch"><input type="checkbox" id="demo"> Modo demo</label>
-    </section>
-    <div id="notification" class="notification" role="alert" hidden></div>
-    <div class="workspace">
-      <section class="pedal-area" aria-label="Controlos físicos do MOOD MKII">
-        <div class="section-heading"><span>01 / O PEDAL</span><span class="tag" id="pedal-bank" aria-live="polite">NORMAL · banco principal</span></div>
-        <p id="bank-description" class="bank-description"></p>
-        <div class="pedal-stage">
-          <div class="pedal">
-            <span class="screw screw-left"></span><span class="screw screw-right"></span>
-            <div id="pedal-knobs" class="knob-grid"></div>
-            <div id="pedal-toggles" class="pedal-toggles"></div>
-            <div class="pedal-art" aria-hidden="true"><span class="orbit orbit-one"></span><span class="orbit orbit-two"></span><strong>MOOD<sup>MKII</sup></strong><small>SPATIAL CHEMISTRY</small></div>
-            <div class="preset-toggle"><label>PRESET<select id="physical-preset" aria-label="Preset físico"><option value="0">LIVE</option><option value="2">LEFT · 2</option><option value="1">RIGHT · 1</option></select></label></div>
-            <div id="footswitches" class="footswitches"></div>
-            <div class="pedal-bottom">MOOD MKII <span>●</span> MIDI STUDIO</div>
-          </div>
-        </div>
-        <p class="pedal-tip">Arrasta os knobs, usa os sliders ou introduz o valor CC.<br>Wet à esquerda · Micro-loop à direita, como no pedal.</p>
-        <div class="signal-card"><span>ROUTING / ESQUEMA</span><strong id="signal-flow"></strong><small>Representação do destino do canal Wet · valores da interface</small></div>
-        <div class="state-note"><span>ⓘ</span><p><strong>Valores da interface, não telemetria.</strong> O MOOD não documenta leitura de estado MIDI. Alterações nos footswitches/knobs físicos não chegam ao site. Ligar ou mudar de preset não sincroniza os knobs. Nada é enviado automaticamente ao ligar.</p></div>
-      </section>
-      <section class="control-area card" aria-label="Comandos adicionais">
-        <div class="panel-heading"><div><p class="eyebrow">02 / EXPLORAR</p><h2>Spatial chemistry.</h2></div><span class="panel-icon" aria-hidden="true">✳</span></div>
-        <div class="tabs" role="tablist" aria-label="Grupos de controlos">
-          <button role="tab" id="tab-performance" aria-controls="panel-performance" aria-selected="true" data-tab="performance">Tocar</button>
-          <button role="tab" id="tab-hidden" aria-controls="panel-hidden" aria-selected="false" tabindex="-1" data-tab="hidden">Hidden</button>
-          <button role="tab" id="tab-dips" aria-controls="panel-dips" aria-selected="false" tabindex="-1" data-tab="dips">DIP / Ramp</button>
-          <button role="tab" id="tab-synth" aria-controls="panel-synth" aria-selected="false" tabindex="-1" data-tab="synth">Synth</button>
-          <button role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1" data-tab="settings">Configurar</button>
-        </div>
-        <div id="panels"></div>
-      </section>
-    </div>
-    <section class="bottom-grid">
-      <details class="card guide"><summary>Como ligar o teu MOOD <span>+</span></summary><ol><li>Usa Chrome ou Edge num computador e autoriza o acesso MIDI. O site funciona por HTTPS. Safari e Firefox podem não disponibilizar Web MIDI.</li><li>Liga uma interface USB–MIDI ao computador e a sua saída ao MIDI IN TRS de ¼″ do MOOD, usando um conversor compatível (por exemplo, Chase Bliss MIDIBox). Um cabo USB direto ao pedal não substitui esta interface. Não assumas que qualquer adaptador TRS serve.</li><li>Seleciona a saída da interface e o canal do pedal (por defeito, <strong>2</strong>). Para mudar o canal no pedal: mantém os dois footswitches premidos ao ligar a alimentação e envia um Program Change no canal desejado.</li><li>Desativa o modo demo. Experimenta um CC e confirma a resposta no pedal. O site não processa áudio nem deteta que modelo está ligado.</li></ol><p>O manual não publica uma implementação SysEx. Não são pedidos privilégios SysEx nem enviados comandos não documentados. MIDI clock deve ser fornecido por um controlador externo; não é gerado por este site.</p></details>
-      <section class="card activity" aria-label="Monitor MIDI"><div class="activity-heading"><h3>Monitor MIDI</h3><button id="clear-log" class="text-button">Limpar</button></div><p id="monitor-empty">Os próximos gestos aparecem aqui.</p><ol id="log" aria-label="Mensagens MIDI recentes"></ol></section>
-    </section>
+    <section class="selection-intro"><p class="eyebrow">CONTROLADORES INDEPENDENTES / CHASE BLISS</p><h1>Escolhe o teu<br><em>próximo universo.</em></h1><p>Quatro personalidades. Os controlos certos no lugar certo.<br>Explora em demo ou liga o teu pedal por MIDI.</p></section>
+    <nav class="pedal-library" id="pedal-library" aria-label="Selecionar pedal"></nav>
+    <noscript>Ativa JavaScript para usar o controlador e a seleção de pedais.</noscript>
+    <aside class="selection-note"><strong>A escolha é tua, não uma deteção automática.</strong><p>Seleciona o modelo que está fisicamente ligado, a saída MIDI e o canal correto. Abrir uma página não envia comandos nem pede acesso MIDI. Alterar de pedal reinicia os valores locais; nada é copiado ou enviado ao novo pedal.</p></aside>
   </main>
-  <footer><span>Feito para explorar. Sem contas, sem tracking, sem áudio na cloud.</span><span>Não afiliado à Chase Bliss · <a href="https://github.com/JoaoBAfonso/mood-mkii-controller" target="_blank" rel="noreferrer">Código no GitHub ↗</a></span></footer>
-  <dialog id="confirm-dialog"><form method="dialog"><p class="eyebrow">CONFIRMAR COMANDO</p><h2>Antes de continuar…</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Cancelar</button><button value="confirm" class="danger">Confirmar envio</button></div></form></dialog>
+  <footer><span>Sem contas, sem tracking, sem áudio na cloud.</span><span>Não afiliado à Chase Bliss · Web MIDI para Chrome / Edge</span></footer>
 </body>
 </html>
