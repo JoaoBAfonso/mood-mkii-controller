@@ -1,8 +1,8 @@
-import { getInstrument } from './instruments.js?v=3.3.0';
-import { controlMessages, presetMessages, noteMessage, pitchBendMessage, sendMessage } from './midi.js?v=3.3.0';
-import { createPresetManager } from './presets.js?v=3.3.0';
-import { createHelpTooltip } from './tooltip.js?v=3.3.0';
-import { instrumentPanels, menuControls, panelControlIds } from './instrument-panels.js?v=3.3.0';
+import { getInstrument } from './instruments.js?v=3.4.0';
+import { controlMessages, presetMessages, noteMessage, pitchBendMessage, sendMessage } from './midi.js?v=3.4.0';
+import { createPresetManager } from './presets.js?v=3.4.0';
+import { createHelpTooltip } from './tooltip.js?v=3.4.0';
+import { instrumentPanels, menuControls, panelControlIds } from './instrument-panels.js?v=3.4.0';
 
 const $ = (id) => document.getElementById(id);
 const controlName = (control) => control.name.replace(/\s*·\s*MIDI Value/gi, '');

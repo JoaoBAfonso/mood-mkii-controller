@@ -39,8 +39,9 @@ test('imports play locally, persist across reloads, edit and combine section/sea
   await page.locator('#audio-files').setInputFiles([audioFile('Tape sketch.wav'), audioFile('Finished.wav')]);
   await expect(page.locator('.sound-entry')).toHaveCount(2);
   const card = page.locator('.sound-entry').filter({ has: page.getByRole('heading', { name: 'Tape sketch', exact: true }) });
-  await card.locator('audio').evaluate(async (audio) => { await audio.play(); });
-  await expect.poll(() => card.locator('audio').evaluate((audio) => audio.duration)).toBe(1);
+  await card.getByRole('button', { name: 'Play Tape sketch', exact: true }).click();
+  await expect.poll(() => page.locator('#player-audio').evaluate((audio) => audio.duration)).toBe(1);
+  await page.locator('#player-size').click();
   await card.getByRole('button', { name: 'Edit', exact: true }).click();
   await page.locator('#edit-title').fill('Orange horizon');
   await page.locator('#edit-section').selectOption('Work in Progress');
@@ -124,6 +125,28 @@ test('library pagination retains all imported sounds and separate browser profil
 });
 
 test.describe('recorder', () => {
+  test('recording pauses the dedicated dock and blocks transport, including a pending Play request', async ({ page }) => {
+    await ready(page); await page.locator('#audio-files').setInputFiles(audioFile('Monitor.wav'));
+    await page.getByRole('button', { name: 'Play Monitor', exact: true }).click();
+    await expect.poll(() => page.locator('#player-audio').evaluate((audio) => !audio.paused)).toBe(true);
+    await page.locator('#player-size').click(); await page.locator('#player-toggle').click();
+    await page.evaluate(() => {
+      const resume = AudioContext.prototype.resume;
+      AudioContext.prototype.resume = async function () { await new Promise((resolve) => { window.resumePlayer = resolve; }); return resume.call(this); };
+    });
+    await page.locator('#player-toggle').click();
+    await page.locator('#record').click(); await expect(page.locator('#stop-recording')).toBeVisible();
+    await page.evaluate(() => window.resumePlayer());
+    await expect(page.locator('#player-error')).toContainText('Stop the recording');
+    expect(await page.locator('#player-audio').evaluate((audio) => audio.paused)).toBe(true);
+    await page.locator('#player-toggle').click();
+    expect(await page.locator('#player-audio').evaluate((audio) => audio.paused)).toBe(true);
+    await expect.poll(() => page.locator('#recording-time').textContent()).not.toBe('00:00');
+    await page.locator('#stop-recording').click(); await expect(page.locator('#notification')).toHaveText('Recording saved locally.');
+    await page.getByRole('button', { name: /^All sounds/ }).click();
+    await expect(page.locator('.sound-entry')).toHaveCount(2);
+    await page.locator('#player-close').click();
+  });
   test('records a playable take to Recordings and releases the microphone', async ({ page }) => {
     await ready(page);
     await page.addInitScript(() => {
@@ -140,7 +163,9 @@ test.describe('recorder', () => {
     await expect(page.locator('.sound-entry')).toContainText('First take');
     await expect(page.locator('.section-label')).toHaveText('Recordings');
     await expect.poll(() => page.evaluate(() => window.recordingTracks.every((track) => track.readyState === 'ended'))).toBe(true);
-    await page.locator('.sound-entry audio').evaluate(async (audio) => { await audio.play(); });
+    await page.getByRole('button', { name: 'Play First take', exact: true }).click();
+    await expect.poll(() => page.locator('#player-audio').evaluate((audio) => !audio.paused)).toBe(true);
+    await page.locator('#player-size').click();
     await expect(page.locator('#recovery')).toBeHidden();
     await page.reload(); await expect(page.locator('.sound-entry')).toContainText('First take');
   });

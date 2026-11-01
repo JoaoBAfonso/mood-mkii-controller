@@ -10,6 +10,12 @@ Open **Sound Journal** from the initial hub, in Chrome or Edge. Choose a section
 
 Each entry offers a player, original-file download, editing and confirmed deletion. Add comma-separated tags and notes via **Edit**, then combine section, search and tag filters. The library is local to this origin and browser profile; a localhost preview and the published GitHub Pages site have separate libraries. Use **Local storage & backup → Export full backup / Restore backup** to transfer them. Restoring merges entries by ID, with confirmation before replacing matches.
 
+Audio cards show whole-file amplitude bars before playback, decoded locally (including stereo channels). Waveform analysis is queued as cards approach the viewport and cached for the session; unsupported decoders show an explicit message without discarding the original.
+
+**Play & visualize** opens the dedicated expanded player. **Minimize** keeps playback and seeking available in a bottom dock; **Expand** restores it, and Escape minimizes rather than stops. Choose Spectrum bars or Oscilloscope (2D), Spectral terrain or Orbital sculpture (perspective-projected 3D), or Liquid ribbons / Prismatic bloom (creative). These are live Web Audio visualizations, not simulated bars. Volume, timeline seeking, previous/next and repeat controls accompany the full track waveform.
+
+Use **Play this view**, select several sounds and **Play selected**, or **Open audio files together** to import and open a playlist. **+ Queue** and **Add selected to queue** append sounds without interrupting the active track; adding to an empty queue opens a paused mini player. The session queue supports repeated tracks, moving entries up, removing entries and automatic next-track playback. It is not stored in backups or across reloads. Filtering and metadata editing preserve active playback; deleting its source closes the player. Closing the player stops playback and clears its queue.
+
 The recorder uses the browser-selected microphone/audio input, not Web MIDI or an automatic system-audio feed. Playback depends on the browser's codec support; unsupported originals remain downloadable. If saving a take fails, its player and download remain available with a retry button. Keep regular backups: local storage is not a substitute for an archived copy or a password-protected private cloud library.
 
 ## Features

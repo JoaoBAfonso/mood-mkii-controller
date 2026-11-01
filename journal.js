@@ -1,4 +1,6 @@
-import { journalSections, audioExtensions, validateEntry, openJournal, filterEntries, encodeBackup, decodeBackup } from './journal-store.js?v=3.3.0';
+import { journalSections, audioExtensions, validateEntry, openJournal, filterEntries, encodeBackup, decodeBackup } from './journal-store.js?v=3.4.0';
+import { createJournalPlayer } from './journal-player.js?v=3.4.0';
+import { drawWaveform, timeLabel } from './journal-audio.js?v=3.4.0';
 
 const $ = (id) => document.getElementById(id);
 let store;
@@ -14,12 +16,42 @@ let recordingStarted = 0;
 let clock;
 let pendingTake;
 let recoveryUrl;
+let playerImportMode = 'open';
 const urls = new Map();
 const notify = (message = '') => {
   $('notification').textContent = message; $('notification').hidden = !message;
   $('edit-error').textContent = message; $('edit-error').hidden = !message || !$('edit-dialog').open;
+  if ($('sound-player').open) { $('player-error').textContent = message; $('player-error').hidden = !message; }
 };
 const sizeLabel = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+const player = createJournalPlayer({ notify, canPlay: () => !recordingPending });
+const selected = new Set();
+let currentView = [];
+const waveforms = new Map();
+const observer = new IntersectionObserver((items) => {
+  for (const item of items) {
+    if (!item.isIntersecting) continue;
+    observer.unobserve(item.target);
+    const entry = entries.find((entry) => entry.id === item.target.dataset.entry);
+    if (!entry) continue;
+    const card = item.target;
+    player.preview(entry.audio).then((data) => {
+      if (!card.isConnected) return;
+      const canvas = card.querySelector('.waveform-preview');
+      waveforms.set(canvas, data.peaks); drawWaveform(canvas, data.peaks);
+      canvas.dataset.ready = 'true'; card.querySelector('.waveform-status').textContent = `${timeLabel(data.duration)} · Full track waveform`;
+    }, (error) => {
+      if (card.isConnected) card.querySelector('.waveform-status').textContent = `Waveform unavailable: ${error.message}. You can still try playback or download.`;
+    });
+  }
+}, { rootMargin: '600px' });
+const waveResize = new ResizeObserver((items) => { for (const item of items) { const peaks = waveforms.get(item.target); if (peaks) drawWaveform(item.target, peaks); } });
+function selectionControls() {
+  $('selection-count').textContent = `${selected.size} selected`;
+  $('play-selection').disabled = !selected.size || recordingPending;
+  $('queue-selection').disabled = !selected.size || recordingPending;
+  $('play-view').disabled = !currentView.length || recordingPending;
+}
 function controls() {
   for (const id of ['import-audio', 'export-backup', 'restore-backup', 'persistent-storage']) $(id).disabled = !store || busy || recordingPending;
   $('record').disabled = !store || busy || recordingPending || Boolean(pendingTake);
@@ -27,6 +59,9 @@ function controls() {
   $('retry-recording').disabled = busy;
   $('recording-title').disabled = recordingPending;
   for (const button of $('entries').querySelectorAll('.entry-actions button')) button.disabled = busy || recordingPending;
+  $('open-player-files').disabled = !store || busy || recordingPending;
+  $('player-add-files').disabled = !store || busy || recordingPending;
+  selectionControls();
 }
 async function operate(task) {
   if (busy) { notify('Please wait for the current library operation to finish.'); return; }
@@ -42,12 +77,14 @@ function element(tag, text, className) {
   return node;
 }
 function releasePlayers() {
-  for (const player of $('entries').querySelectorAll('audio')) { player.pause(); player.removeAttribute('src'); player.load(); }
+  observer.disconnect(); waveResize.disconnect(); waveforms.clear();
   for (const url of urls.values()) URL.revokeObjectURL(url);
   urls.clear();
 }
 function render() {
   releasePlayers();
+  player.reconcile(entries);
+  for (const id of selected) if (!entries.some((entry) => entry.id === id)) selected.delete(id);
   $('entry-count').textContent = String(entries.length);
   $('section-filters').replaceChildren();
   for (const name of ['', ...journalSections]) {
@@ -63,18 +100,33 @@ function render() {
   for (const name of tags) $('tag-filter').add(new Option(name, name));
   $('tag-filter').value = tags.includes(tag) ? tag : '';
   const filtered = filterEntries(entries, { section, query: $('search').value, tag: $('tag-filter').value, sort: $('sort').value });
+  currentView = filtered;
+  selectionControls();
   $('results-count').textContent = `${filtered.length} ${filtered.length === 1 ? 'sound' : 'sounds'}${section ? ` in ${section}` : ''}`;
   $('entries').replaceChildren();
   for (const entry of filtered.slice(0, visibleCount)) {
     const card = element('article', undefined, 'sound-entry'); card.dataset.entry = entry.id;
     const top = element('div', undefined, 'entry-top');
     top.append(element('span', entry.section, 'section-label'), element('time', new Date(entry.createdAt).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })));
-    const audio = document.createElement('audio'); audio.controls = true; audio.preload = 'none';
-    audio.setAttribute('aria-label', `Play ${entry.title}`);
-    const url = URL.createObjectURL(entry.audio); urls.set(entry.id, url); audio.src = url;
-    audio.onplay = () => { for (const other of document.querySelectorAll('audio')) if (other !== audio) other.pause(); };
-    audio.onerror = () => notify(`This browser could not play "${entry.title}". Download the original file to play it in another audio application.`);
-    card.append(top, element('h3', entry.title), element('p', `${entry.fileName} · ${sizeLabel(entry.audio.size)}`, 'entry-file'), audio);
+    const selection = element('label', undefined, 'entry-select');
+    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = selected.has(entry.id);
+    checkbox.setAttribute('aria-label', `Select ${entry.title}`);
+    checkbox.onchange = () => { if (checkbox.checked) selected.add(entry.id); else selected.delete(entry.id); selectionControls(); };
+    selection.append(checkbox, element('span', 'Select')); top.append(selection);
+    const url = URL.createObjectURL(entry.audio); urls.set(entry.id, url);
+    const waveform = document.createElement('canvas'); waveform.className = 'waveform-preview';
+    waveform.setAttribute('role', 'img'); waveform.setAttribute('aria-label', `Full audio waveform: ${entry.title}`);
+    const status = element('p', 'Analysing audio for waveform…', 'waveform-status');
+    const playback = element('div', undefined, 'entry-playback');
+    const play = element('button', 'Play & visualize', 'entry-play primary');
+    play.setAttribute('aria-label', `Play ${entry.title}`); play.onclick = () => {
+      if (recordingPending) { notify('Stop the recording before playing a sound.'); return; }
+      player.open([entry]);
+    };
+    const add = element('button', '+ Queue'); add.setAttribute('aria-label', `Add ${entry.title} to queue`);
+    add.onclick = () => { if (recordingPending) notify('Stop the recording before adding sounds.'); else player.add([entry]); };
+    playback.append(play, add);
+    card.append(top, element('h3', entry.title), element('p', `${entry.fileName} · ${sizeLabel(entry.audio.size)}`, 'entry-file'), waveform, status, playback);
     if (entry.notes) card.append(element('p', entry.notes, 'entry-notes'));
     const tagList = element('div', undefined, 'tags');
     for (const tag of entry.tags) tagList.append(element('span', tag));
@@ -91,6 +143,7 @@ function render() {
       operate(async () => { await store.remove(entry.id); entries = entries.filter((item) => item.id !== entry.id); render(); });
     };
     actions.append(download, edit, remove); card.append(actions); $('entries').append(card);
+    observer.observe(card); waveResize.observe(waveform);
   }
   $('empty').hidden = filtered.length > 0;
   $('empty').querySelector('h3').textContent = entries.length ? 'No sounds match this view.' : 'A quiet space, ready for a sound.';
@@ -110,16 +163,27 @@ async function saveEntries(newEntries) {
   render();
 }
 $('import-audio').onclick = () => $('audio-files').click();
-$('audio-files').onchange = () => {
-  const files = [...$('audio-files').files]; $('audio-files').value = '';
+function importFiles(input, playerMode) {
+  const files = [...input.files]; input.value = '';
   if (!files.length) return;
   operate(async () => {
     for (const file of files) if (!file.size || !(file.type.startsWith('audio/') || audioExtensions.test(file.name))) throw new Error(`"${file.name}" is not a supported audio file`);
-    await saveEntries(files.map((file) => makeEntry(file, file.name, file.name.replace(/\.[^.]+$/, ''), section || 'Sketches')));
+    const imported = files.map((file) => makeEntry(file, file.name, file.name.replace(/\.[^.]+$/, ''), section || 'Sketches'));
+    await saveEntries(imported);
     $('search').value = ''; $('tag-filter').value = ''; render();
     notify(`Imported ${files.length} ${files.length === 1 ? 'sound' : 'sounds'}.`);
+    if (playerMode === 'open') player.open(imported);
+    if (playerMode === 'queue') player.add(imported);
   });
-};
+}
+$('audio-files').onchange = () => importFiles($('audio-files'));
+$('open-player-files').onclick = () => { playerImportMode = 'open'; $('player-files').click(); };
+$('player-add-files').onclick = () => { playerImportMode = 'queue'; $('player-files').click(); };
+$('player-browse').onclick = () => { $('player-size').click(); $('section-filters').scrollIntoView({ block: 'start' }); };
+$('player-files').onchange = () => importFiles($('player-files'), playerImportMode);
+$('play-view').onclick = () => player.open(currentView);
+$('play-selection').onclick = () => player.open(entries.filter((entry) => selected.has(entry.id)));
+$('queue-selection').onclick = () => player.add(entries.filter((entry) => selected.has(entry.id)));
 for (const id of ['search', 'tag-filter', 'sort']) $(id).addEventListener(id === 'search' ? 'input' : 'change', () => { visibleCount = 20; render(); });
 $('show-more').onclick = () => { visibleCount += 20; render(); };
 for (const name of journalSections) $('edit-section').add(new Option(name, name));
@@ -187,6 +251,7 @@ $('record').onclick = async () => {
   let recordingError = '';
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    player.pause();
     for (const player of document.querySelectorAll('audio')) player.pause();
     const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4'].find((type) => MediaRecorder.isTypeSupported(type));
     recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);

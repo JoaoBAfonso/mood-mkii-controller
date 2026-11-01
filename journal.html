@@ -7,8 +7,8 @@
   <meta name="description" content="A local-first personal sound journal. Collect compositions, sketches and recordings.">
   <title>Sound Journal · MIDI Studio</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="journal.css?v=3.3.0">
-  <script type="module" src="journal.js?v=3.3.0"></script>
+  <link rel="stylesheet" href="journal.css?v=3.4.0">
+  <script type="module" src="journal.js?v=3.4.0"></script>
 </head>
 <body>
   <header class="topbar"><a href="./">← MIDI STUDIO</a><span class="local-badge">ON THIS DEVICE</span></header>
@@ -30,6 +30,8 @@
       <nav id="section-filters" aria-label="Journal sections"></nav>
       <div class="filters"><label>Search<input id="search" type="search" placeholder="Title, notes or tags"></label><label>Tag<select id="tag-filter"><option value="">All tags</option></select></label><label>Sort<select id="sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title A–Z</option></select></label></div>
       <p id="results-count" role="status"></p>
+      <div class="playlist-actions" aria-label="Playlist tools"><button id="play-view" disabled>Play this view</button><button id="play-selection" disabled>Play selected</button><button id="queue-selection" disabled>Add selected to queue</button><button id="open-player-files" disabled>Open audio files together</button><span id="selection-count" role="status">0 selected</span></div>
+      <input id="player-files" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.ogg,.oga,.opus,.flac,.aiff,.aif,.webm" multiple hidden>
       <div id="entries"></div>
       <div id="empty" class="empty surface"><span aria-hidden="true">≋</span><h3>A quiet space, ready for a sound.</h3><p>Import your first composition or record a sketch above.</p></div>
       <button id="show-more" hidden>Show more sounds</button>
@@ -38,6 +40,15 @@
     <noscript>Enable JavaScript to use the local sound journal.</noscript>
   </main>
   <footer>LOCAL-FIRST · NO UPLOADS · YOUR SOUND, YOUR DEVICE</footer>
+  <dialog id="sound-player" aria-label="Dedicated sound player">
+    <header class="player-heading"><div><p class="eyebrow" id="player-section"></p><h2 id="player-title"></h2><p id="player-track-position"></p></div><div class="player-window-actions"><button id="player-size">Minimize</button><button id="player-close" aria-label="Close player">×</button></div></header>
+    <p id="player-error" role="alert" hidden></p>
+    <div class="player-stage"><canvas id="player-visualizer" aria-label="Live audio visualization"></canvas><label class="profile-picker">Visualizer profile<select id="visual-profile"></select></label><span class="stage-caption">AUDIO-REACTIVE · 2D / PROJECTED 3D / CREATIVE</span></div>
+    <div class="player-timeline"><canvas id="player-waveform" aria-label="Full track waveform"></canvas><input id="player-progress" type="range" min="0" max="1" step="0.01" value="0" aria-label="Track position" disabled><output id="player-time">00:00 / 00:00</output></div>
+    <div class="player-transport"><button id="player-previous" aria-label="Previous track">Previous</button><button id="player-toggle" class="primary">Play</button><button id="player-next" aria-label="Next track">Next</button><label class="player-volume">Volume<input id="player-volume" type="range" min="0" max="1" step="0.01" value="1"></label><label class="player-repeat">Repeat<select id="player-repeat"><option value="off">Off</option><option value="all">Queue</option><option value="one">Track</option></select></label><a id="player-download" download>Download</a></div>
+    <details class="player-playlist" open><summary>Playlist <span>Session queue · add sounds without interrupting playback</span></summary><ol id="player-queue"></ol><div class="playlist-actions"><button id="player-add-files">Add audio files</button><button id="player-browse">Browse journal</button><button id="player-clear">Keep current track only</button></div></details>
+    <audio id="player-audio" preload="metadata"></audio>
+  </dialog>
   <dialog id="edit-dialog"><form id="edit-form"><p class="eyebrow">SHAPE THE ENTRY</p><h2>Edit sound</h2><p id="edit-error" role="alert" hidden></p><label>Title<input id="edit-title" required maxlength="200"></label><label>Section<select id="edit-section"></select></label><label>Tags<input id="edit-tags" maxlength="1000" placeholder="ambient, guitar, late night"></label><label>Notes<textarea id="edit-notes" rows="4" maxlength="10000" placeholder="What is this becoming?"></textarea></label><div class="dialog-actions"><button type="button" id="cancel-edit">Cancel</button><button class="primary" type="submit">Save changes</button></div></form></dialog>
 </body>
 </html>
