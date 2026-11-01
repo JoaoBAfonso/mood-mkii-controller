@@ -76,12 +76,12 @@ test('dedicated Hidden controls synchronize the pedal view in both directions', 
   await expect(page.locator('#pedal-cc-25')).toHaveValue('127');
 });
 
-test('failed Hidden transition leaves both bank and toggle unchanged', async ({ page }) => {
+test('failed hardware Hidden transition leaves the viewed bank and toggle unchanged', async ({ page }) => {
   await page.locator('#tab-hidden').click();
   await page.evaluate(() => { window.failAll = true; });
   await page.locator('#cc-104').click();
   await expect(page.locator('#cc-104')).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.locator('#pedal-cc-14')).toBeVisible();
+  await expect(page.locator('#pedal-cc-24')).toBeVisible();
   await expect(page.locator('#notification')).toContainText('Test send failure');
 });
 
@@ -93,6 +93,7 @@ test('demo and each hardware output/channel have independent state', async ({ pa
   await page.locator('#cc-104').click();
   await clearMessages(page);
   await page.locator('#demo').uncheck();
+  await page.locator('#tab-performance').click();
   await expect(page.locator('#pedal-cc-14')).toHaveValue('30');
   await expect(page.locator('#cc-104')).toHaveAttribute('aria-pressed', 'false');
   await page.locator('#channel').selectOption('3');
@@ -259,4 +260,72 @@ test('disconnect retains failed notes and reconnect releases on the original tar
   expect(await messages(page)).toEqual([[129, 60, 0]]);
   await expect(key).not.toHaveClass(/playing/);
   await expect(page.locator('#pedal-cc-14')).toHaveValue('30');
+});
+
+test('Tocar/Hidden navigation restores both banks without sending CC104 or altering its state', async ({ page }) => {
+  await page.locator('#pedal-cc-14').fill('23');
+  await clearMessages(page);
+  await page.locator('#tab-hidden').click();
+  await expect(page.locator('#pedal-cc-24')).toBeVisible();
+  await expect(page.locator('#pedal-bank')).toContainText('HIDDEN');
+  await expect(page.locator('#cc-104')).toHaveAttribute('aria-pressed', 'false');
+  expect(await messages(page)).toEqual([]);
+  await page.locator('#pedal-cc-24').fill('101');
+  await clearMessages(page);
+  await page.locator('#tab-performance').click();
+  await expect(page.locator('#pedal-cc-14')).toHaveValue('23');
+  await expect(page.locator('#pedal-bank')).toContainText('NORMAL');
+  await page.locator('#tab-hidden').click();
+  await expect(page.locator('#pedal-cc-24')).toHaveValue('101');
+  expect(await messages(page)).toEqual([]);
+  await page.locator('#cc-104').click();
+  await clearMessages(page);
+  await page.locator('#tab-performance').click();
+  await expect(page.locator('#pedal-cc-14')).toHaveValue('23');
+  await page.locator('#tab-hidden').click();
+  await expect(page.locator('#cc-104')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#pedal-cc-24')).toHaveValue('101');
+  expect(await messages(page)).toEqual([]);
+});
+
+test('keyboard tab navigation changes the bank too, and other panels retain the current view', async ({ page }) => {
+  await page.locator('#tab-performance').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#pedal-cc-24')).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#tab-dips')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#pedal-cc-24')).toBeVisible();
+  await page.keyboard.press('Home');
+  await expect(page.locator('#pedal-cc-14')).toBeVisible();
+  expect(await messages(page)).toEqual([]);
+});
+
+test('mode diagrams select exact CC values, mirror toggles and update routing and descriptions', async ({ page }) => {
+  for (const [name, cc, value] of [['REVERB', 21, 0], ['DELAY', 21, 2], ['SLIP', 21, 3], ['ENV', 23, 0], ['TAPE', 23, 2], ['STRETCH', 23, 3]]) {
+    await clearMessages(page);
+    await page.getByRole('button', { name: `Selecionar ${name}`, exact: true }).click();
+    expect(await messages(page)).toEqual([[177, cc, value]]);
+    await expect(page.locator(`#pedal-cc-${cc}`)).toHaveValue(String(value));
+    await expect(page.getByRole('button', { name: `Selecionar ${name}`, exact: true })).toHaveAttribute('aria-pressed', 'true');
+  }
+  await page.locator('#pedal-cc-21').selectOption('2');
+  await expect(page.getByRole('button', { name: 'Selecionar DELAY', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#mode-description-21')).toContainText('feedback');
+  await expect(page.locator('#signal-flow')).toContainText('WET (DELAY)');
+  await expect(page.locator('#signal-flow')).toContainText('LOOP (STRETCH)');
+  await page.evaluate(() => { window.failAll = true; });
+  await page.getByRole('button', { name: 'Selecionar SLIP', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Selecionar DELAY', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('ramping diagram follows its full CC range and font is loaded locally', async ({ page }) => {
+  await page.locator('#tab-hidden').click();
+  await page.locator('#pedal-cc-25').fill('60');
+  await expect(page.locator('#ramp-wave-name')).toHaveText('Ramping · Senoidal');
+  await expect(page.locator('#ramp-wave')).toHaveAttribute('d', /Q/);
+  await page.locator('#cc-25').selectOption('127');
+  await expect(page.locator('#ramp-wave-name')).toHaveText('Ramping · Random');
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.evaluate(() => document.fonts.check('14px Outfit'))).toBe(true);
+  expect((await page.request.get('/assets/fonts/outfit-variable.ttf')).status()).toBe(200);
 });

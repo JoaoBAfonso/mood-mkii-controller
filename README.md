@@ -10,6 +10,8 @@ Independent, Portuguese-language Web MIDI controller for the **Chase Bliss MOOD 
 - All **61 documented CC numbers**, including hidden parameters, DIP switches, ramping, global settings, legacy tap tempo, preset saving and Synth controls.
 - Knob dragging, native sliders, precise numeric input and keyboard-accessible controls.
 - Separate normal/Hidden pedal banks, retaining each parameter's value when switching modes.
+- Tocar/Hidden tabs select the displayed bank without changing the hardware's CC104 state.
+- Selectable mode diagrams for Reverb, Delay, Slip, Env, Tape and Stretch, plus routing and ramping waveform illustrations.
 - Demo mode that sends nothing to hardware, explicit MIDI errors, hot-plug support and an outgoing MIDI monitor.
 - Preset recall via PC0 (Live) and PC1–122; save via CC111 with overwrite confirmation.
 - Note On/Off keyboard, velocity, ADSR, portamento and documented CC0 pitch bend.
@@ -32,7 +34,9 @@ The manual does **not document SysEx or a state readback protocol**. This applic
 
 ### Hidden bank and state isolation
 
-Clicking **Hidden menu (CC104)** on the site switches the virtual pedal's controls to their dedicated Hidden CCs. Entering/leaving the bank sends **only CC104**; leaving restores the normal UI values without replaying or overwriting them. Re-entering restores the Hidden values. The mapping follows the [main manual's Hidden Options diagram](https://www.chasebliss.com/s/MOOD-MKII_Manual_Pedal_Chase-Bliss.pdf):
+Selecting the **Tocar** tab shows the normal pedal bank; selecting **Hidden** shows the dedicated Hidden CC bank. Mouse and keyboard tab navigation restore the bank's existing values **without sending MIDI or changing CC104**. The other tabs retain the current pedal view. The caption explicitly separates the visible bank from CC104's last UI state.
+
+Clicking **Hidden menu · hardware (CC104)** sends **only CC104** and shows the corresponding bank. Neither tab navigation nor hardware mode changes replay or overwrite the other bank's values. The mapping follows the [main manual's Hidden Options diagram](https://www.chasebliss.com/s/MOOD-MKII_Manual_Pedal_Chase-Bliss.pdf):
 
 | Position | Normal | Hidden |
 |---|---|---|
@@ -77,8 +81,12 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-The tests use a mocked MIDI output; they do not send anything to physical hardware. They cover Hidden bank restoration and correct bytes, state isolation, failed sends, presets/confirmation, retryable note releases, control coverage, input validation and mobile layouts in both banks.
+The tests use a mocked MIDI output; they do not send anything to physical hardware. They cover mouse/keyboard tab bank selection without MIDI sends, Hidden bank restoration and correct bytes, mode diagram selection, local font loading, state isolation, failed sends, presets/confirmation, retryable note releases, control coverage, input validation and mobile layouts.
 
-GitHub Pages deployment runs the MIDI and browser tests and publishes only the six static site files from the `main` branch through [the workflow](.github/workflows/pages.yml). Enable Pages with **GitHub Actions** as the source. Versioned asset URLs prevent a freshly loaded release from mixing new scripts with cached old modules; bump the asset query versions together when publishing incompatible changes.
+GitHub Pages deployment runs the MIDI and browser tests and publishes the six static site files plus the local font assets from the `main` branch through [the workflow](.github/workflows/pages.yml). Enable Pages with **GitHub Actions** as the source. Versioned asset URLs prevent a freshly loaded release from mixing new scripts with cached old modules; bump the asset query versions together when publishing incompatible changes.
 
-The illustration is original CSS, not a copied product photograph or brand artwork. Product names identify compatible hardware; this project is not affiliated with or endorsed by Chase Bliss.
+## Visual reference
+
+The [user-supplied MOOD MKII manual](https://static1.squarespace.com/static/622176a9b8d15d57ffbf5700/t/64111ea7c3f6d569218566b4/1678843563430/MOOD+MKII_Manual_Pedal_Chase+Bliss.pdf) informed the visual language: white paper, deep purple ink, lavender and pink accents, geometric headings, ruled sections, simple knob diagrams and red DIP-switch housings. Mode explanations are concise original summaries of the documented behavior, not copied manual text.
+
+The geometric **Outfit** font is an open-source substitute, not an extracted proprietary manual font. It is served locally; its [SIL Open Font License](assets/fonts/OFL.txt) is included. Mode schematics, the pedal and the abstract header artwork are original inline SVG/CSS, not copied product photographs, manual illustrations or brand logos. The mode diagrams and routing schema are conceptual UI aids, not audio visualizations or hardware telemetry. Product names identify compatible hardware; this project is not affiliated with or endorsed by Chase Bliss.

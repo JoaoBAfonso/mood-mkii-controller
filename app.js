@@ -1,5 +1,5 @@
-import { controls, controlValueLabel, manualUrl, hiddenPedalMap } from './controls.js?v=1.1.0';
-import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=1.1.0';
+import { controls, controlValueLabel, manualUrl, hiddenPedalMap } from './controls.js?v=1.2.0';
+import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=1.2.0';
 
 const $ = (id) => document.getElementById(id);
 const initialState = () => Object.fromEntries(controls.filter((c) => 'initial' in c).map((c) => [c.cc, c.initial]));
@@ -9,6 +9,7 @@ let state = context.values;
 const views = new Map();
 let access;
 const notes = new Map();
+let visibleBank = 'normal';
 $('manual-link').href = manualUrl;
 for (let channel = 1; channel <= 16; channel++) $('channel').add(new Option(String(channel), String(channel)));
 $('channel').value = '2';
@@ -34,6 +35,7 @@ function switchContext() {
   controls.forEach(updateControl);
   updatePreset();
   updateStateNote();
+  updateModeIllustrations();
 }
 function notify(message) {
   $('notification').textContent = message;
@@ -93,7 +95,11 @@ function change(control, value) {
     context.stale.delete(control.cc);
     updateControl(control);
     if (control.cc === 23) updateControl(controls.find((c) => c.cc === 19));
-    if (control.cc === 104) renderPedal();
+    if (control.cc === 104) {
+      visibleBank = value > 0 ? 'hidden' : 'normal';
+      renderPedal();
+    }
+    updateModeIllustrations();
   } else updateControl(control);
 }
 function confirmCommand(message, callback) {
@@ -219,7 +225,7 @@ function makeControl(control, physical = false) {
 }
 const panelDescriptions = {
   performance: ['Toca no momento.', 'Freeze, overdub e tap tempo sem procurar nos menus.'],
-  hidden: ['O outro lado do MOOD.', 'Hidden menu troca o banco do pedal virtual. Os controlos abaixo também permitem acesso direto, sem ativar Hidden.'],
+  hidden: ['Hidden controls.', 'Este separador mostra o banco Hidden sem enviar MIDI. O botão CC104 abaixo muda o modo no hardware; os parâmetros dedicados funcionam em ambos os modos.'],
   dips: ['Movimento e personalidade.', 'Os DIP switches correspondem à ordem física, vistos por cima do pedal.'],
   synth: ['Transforma texturas em notas.', 'Note On entra no modo Synth. Usa o teclado abaixo; o pedal precisa de áudio/loop capturado. Estes parâmetros são globais.'],
   settings: ['O teu ponto de partida.', 'Presets no pedal e configurações globais. Operações destrutivas pedem confirmação.'],
@@ -238,6 +244,7 @@ for (const [id, [title, description]] of Object.entries(panelDescriptions)) {
 function group(name, title, panelId) {
   const container = document.createElement('div');
   container.className = 'control-group';
+  container.dataset.group = name;
   if (title) {
     const heading = document.createElement('h4'); heading.textContent = title; container.append(heading);
   }
@@ -253,12 +260,15 @@ function renderPedal() {
   }
   $('pedal-knobs').replaceChildren();
   $('pedal-toggles').replaceChildren();
-  const hidden = state[104] > 0;
+  const hidden = visibleBank === 'hidden';
   document.querySelector('.pedal').classList.toggle('hidden-mode', hidden);
-  $('pedal-bank').textContent = `${context.stale.has(104) ? '~ ' : ''}${hidden ? 'HIDDEN · banco alternativo' : 'NORMAL · banco principal'}`;
+  $('pedal-bank').textContent = hidden ? 'HIDDEN · banco alternativo' : 'NORMAL · banco principal';
+  $('bank-description').textContent = `Vista ${hidden ? 'Hidden' : 'normal'} · CC104 ${context.stale.has(104) ? 'não sincronizado' : state[104] > 0 ? 'ON' : 'OFF'}${demo() ? ' (demo)' : ' (último estado da interface)'}. Mudar de separador não envia CC104.`;
   controls.filter((c) => c.group === 'pedal').forEach((c) => {
     const mapped = hidden ? controls.find((candidate) => candidate.cc === hiddenPedalMap[c.cc]) : c;
-    (c.kind === 'range' ? $('pedal-knobs') : $('pedal-toggles')).append(makeControl(mapped, true));
+    const element = makeControl(mapped, true);
+    element.dataset.position = c.cc;
+    (c.kind === 'range' ? $('pedal-knobs') : $('pedal-toggles')).append(element);
   });
 }
 renderPedal();
@@ -293,6 +303,7 @@ function markUnknown() {
   controls.forEach(updateControl);
   updatePreset();
   updateStateNote();
+  updateModeIllustrations();
 }
 function updatePreset() {
   const select = $('physical-preset');
@@ -326,6 +337,10 @@ function activateTab(button) {
     tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1;
     $(`panel-${tab.dataset.tab}`).hidden = !selected;
   });
+  if (button.dataset.tab === 'hidden' || button.dataset.tab === 'performance') {
+    visibleBank = button.dataset.tab === 'hidden' ? 'hidden' : 'normal';
+    renderPedal();
+  }
 }
 const tabs = [...document.querySelectorAll('[data-tab]')];
 tabs.forEach((button, index) => {
@@ -339,6 +354,71 @@ tabs.forEach((button, index) => {
     if (target) { event.preventDefault(); activateTab(target); target.focus(); }
   };
 });
+
+const modeIllustrations = [
+  { cc: 21, value: 0, name: 'REVERB', summary: 'Um espaço que se abre.', description: 'TIME define o tamanho e o decaimento do espaço. MODIFY difunde os ecos, de multi-tap a reverb.', drawing: '<path d="M18 35h12m8-15q18 15 0 30m14-38q28 23 0 46m14-54q37 31 0 62"/><circle cx="24" cy="35" r="4"/>' },
+  { cc: 21, value: 2, name: 'DELAY', summary: 'Ecos que se encontram.', description: 'TIME espaça as repetições. MODIFY controla o feedback, de ecos curtos a repetições persistentes.', drawing: '<path d="M12 52V18h12v34h16V25h12v27h16V32h12v20h16V39h12v13"/>' },
+  { cc: 21, value: 3, name: 'SLIP', summary: 'Tempo, direção e altura.', description: 'Uma janela de áudio percorre o som. MODIFY altera a velocidade e a direção da reprodução.', drawing: '<path d="M14 45h88m-75-6V19h20v20m9 0V12h20v27m9 0V25h12v14M32 58h55m-6-5 6 5-6 5M25 8l-8 8 8 8"/>' },
+  { cc: 23, value: 0, name: 'ENV', summary: 'Pequenos fragmentos vivos.', description: 'LENGTH escolhe o tamanho dos fragmentos. MODIFY regula a sensibilidade ao teu toque.', drawing: '<path d="M10 52h96M14 50l9-29 9 29m10 0 9-40 9 40m10 0 9-22 9 22m10 0 6-15"/>' },
+  { cc: 23, value: 2, name: 'TAPE', summary: 'Um loop em movimento.', description: 'LENGTH define o loop. MODIFY muda a velocidade e permite tocar o som para a frente ou ao contrário.', drawing: '<circle cx="35" cy="35" r="20"/><circle cx="82" cy="35" r="20"/><circle cx="35" cy="35" r="5"/><circle cx="82" cy="35" r="5"/><path d="M35 15h47M35 55h47m-56-28 18 16m29-16 18 16"/>' },
+  { cc: 23, value: 3, name: 'STRETCH', summary: 'De um instante, uma paisagem.', description: 'LENGTH define os fragmentos. MODIFY estica o áudio, muda a direção e pode parar o movimento.', drawing: '<path d="M12 50V25h10v25h9V16h16v34h10V25h22v25h12V16h17v34M12 60h96m-89-5-7 5 7 5m82-10 7 5-7 5"/>' },
+];
+function svgDrawing(drawing) {
+  return `<svg viewBox="0 0 120 72" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${drawing}</svg>`;
+}
+function createModeIllustrations() {
+  const section = document.createElement('section');
+  section.className = 'mode-section';
+  section.setAttribute('aria-label', 'Modos dos dois canais');
+  for (const [cc, title] of [[21, 'Wet channel'], [23, 'Micro-looper channel']]) {
+    const channelSection = document.createElement('div');
+    channelSection.className = `mode-channel ${cc === 21 ? 'wet-channel' : 'loop-channel'}`;
+    const heading = document.createElement('h4');
+    heading.textContent = title;
+    const grid = document.createElement('div'); grid.className = 'mode-grid';
+    for (const mode of modeIllustrations.filter((item) => item.cc === cc)) {
+      const button = document.createElement('button');
+      button.className = 'mode-card';
+      button.dataset.modeCc = cc; button.dataset.modeValue = mode.value;
+      button.setAttribute('aria-label', `Selecionar ${mode.name}`);
+      button.innerHTML = `${svgDrawing(mode.drawing)}<strong>${mode.name}</strong><span>${mode.summary}</span>`;
+      button.onclick = () => change(controls.find((c) => c.cc === cc), mode.value);
+      grid.append(button);
+    }
+    const description = document.createElement('p');
+    description.className = 'mode-description'; description.id = `mode-description-${cc}`;
+    channelSection.append(heading, grid, description); section.append(channelSection);
+  }
+  $('panel-performance').insertBefore(section, $('panel-performance').querySelector('.control-group'));
+  const hiddenDiagram = document.createElement('section');
+  hiddenDiagram.className = 'hidden-diagram';
+  hiddenDiagram.setAttribute('aria-label', 'Forma de onda do ramping');
+  hiddenDiagram.innerHTML = `${svgDrawing('<path id="ramp-wave" d="M10 55 35 15 60 55 85 15 110 55"/>')}<div><strong id="ramp-wave-name"></strong><p>O movimento entre os teus pontos de partida.</p></div>`;
+  $('panel-hidden').insertBefore(hiddenDiagram, $('panel-hidden').querySelector('.control-group'));
+}
+function updateModeIllustrations() {
+  if (!$('mode-description-21')) return;
+  for (const cc of [21, 23]) {
+    const selected = modeIllustrations.find((mode) => mode.cc === cc && mode.value === state[cc]);
+    $(`mode-description-${cc}`).textContent = `${context.stale.has(cc) ? 'Último modo da interface (~): ' : ''}${selected.description}`;
+    document.querySelectorAll(`[data-mode-cc="${cc}"]`).forEach((button) => {
+      button.setAttribute('aria-pressed', String(Number(button.dataset.modeValue) === state[cc]));
+      button.classList.toggle('stale', context.stale.has(cc));
+    });
+  }
+  const waveform = state[25];
+  $('ramp-wave-name').textContent = `Ramping · ${controlValueLabel(25, waveform, state)}${context.stale.has(25) ? ' (~)' : ''}`;
+  $('ramp-wave').setAttribute('d', waveform < 15 ? 'M10 55 35 15 60 55 85 15 110 55'
+    : waveform < 55 ? 'M10 55h20V15h25v40h25V15h30'
+    : waveform < 81 ? 'M10 35Q22 0 35 35T60 35T85 35T110 35'
+    : waveform < 127 ? 'M10 55h20V25h20v15h20V10h20v45h20'
+    : 'M10 40Q23 65 35 30T60 25T85 40T110 15');
+  const wet = controls.find((c) => c.cc === 21).choices.find((choice) => choice.value === state[21]).label;
+  const loop = controls.find((c) => c.cc === 23).choices.find((choice) => choice.value === state[23]).label;
+  $('signal-flow').textContent = `${context.stale.has(22) || context.stale.has(21) || context.stale.has(23) ? '~ ' : ''}${state[22] === 0 ? 'IN' : state[22] === 2 ? `IN + LOOP (${loop})` : `LOOP (${loop})`} → WET (${wet}) → OUT`;
+}
+createModeIllustrations();
+updateModeIllustrations();
 const keyboard = document.createElement('div');
 keyboard.className = 'keyboard-section';
 keyboard.innerHTML = '<h4>Teclado · C4–C5</h4><label class="velocity-label">Velocidade <input id="velocity" type="range" min="1" max="127" value="100"></label><div class="keyboard" id="keyboard"></div><button id="stop-notes" class="text-button">Parar notas ativas</button><p class="hint">Clica e mantém premido, ou usa Espaço/Enter com uma tecla focada. Sem síntese de áudio no navegador.</p>';

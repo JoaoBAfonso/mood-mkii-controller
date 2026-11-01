@@ -29,7 +29,7 @@ export const controls = [
   toggle(106, 'Overdub · Loop', 'performance'),
   action(107, 'Tap tempo', 'performance'),
   action(93, 'Tap tempo · CC legado', 'performance'),
-  toggle(104, 'Hidden menu', 'hidden', 'Troca os controlos do pedal virtual para o banco Hidden. Ao sair, recupera os valores normais da interface, sem os reenviar.'),
+  toggle(104, 'Hidden menu · hardware', 'hidden', 'Envia CC104 para o pedal e mostra o banco correspondente. Os separadores apenas mudam a vista; os CC dedicados funcionam sem ativar este modo.'),
   range(24, 'Stereo width · Wet', 'hidden'),
   select(25, 'Ramping waveform', 'hidden', [
     { value: 0, label: 'Triangular · 0–14' },
