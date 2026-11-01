@@ -8,9 +8,10 @@
   <title>Instrument · MIDI Studio</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/fonts/outfit-variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=3.1.0">
-  <link rel="stylesheet" href="instruments.css?v=3.1.0">
-  <script type="module" src="instrument-app.js?v=3.1.0"></script>
+  <link rel="stylesheet" href="styles.css?v=3.2.0">
+  <link rel="stylesheet" href="instruments.css?v=3.2.0">
+  <link rel="stylesheet" href="replicas.css?v=3.2.0">
+  <script type="module" src="instrument-app.js?v=3.2.0"></script>
 </head>
 <body class="instrument-page">
   <header class="topbar">
@@ -32,16 +33,13 @@
       <div class="instrument-scene">
         <div class="section-heading"><span>01 / THE INSTRUMENT</span><span id="instrument-edition"></span></div>
         <div class="hardware" id="hardware">
-          <header class="hardware-heading"><span id="hardware-brand"></span><strong id="hardware-name"></strong><output id="hardware-screen">MIDI STUDIO</output></header>
-          <section id="onboard-editor" class="onboard-editor" aria-label="Onboard parameter editor">
-            <div class="onboard-navigation"><label>Section<select id="onboard-section"></select></label><label>Parameter<select id="onboard-parameter"></select></label></div>
-            <div id="onboard-control"></div>
-          </section>
+          <header class="hardware-heading"><span id="hardware-brand"></span><strong id="hardware-name"></strong></header>
           <div id="physical-controls" class="hardware-controls"></div>
           <div id="note-controls"></div>
           <div id="transport-controls" class="transport-controls"></div>
         </div>
-        <p class="pedal-tip">Drag a knob or use its slider. Hover for 3 seconds, focus a control or tap ? for help.</p>
+        <p class="hardware-legend"><span>◇ Hardware-only control</span><span id="panel-navigation-hint" hidden>Swipe horizontally to explore the physical panel.</span></p>
+        <p class="pedal-tip">Drag a knob, adjust a fader or use the arrow keys. Hover for 3 seconds, focus a control or tap ? for help.</p>
         <p class="state-note" id="state-note" hidden>~ Values from before the loaded program. Move a control to set it again.</p>
         <button id="stop-notes" hidden>Stop active notes</button>
       </div>
@@ -62,6 +60,11 @@
     </section>
   </main>
   <footer><span>No accounts, tracking or cloud audio.</span><a href="https://github.com/JoaoBAfonso/mood-mkii-controller" target="_blank" rel="noreferrer">Code on GitHub ↗</a></footer>
+  <dialog id="hardware-menu" class="hardware-menu">
+    <header><div><p class="eyebrow" id="hardware-menu-device"></p><h2 id="hardware-menu-title"></h2></div><button id="hardware-menu-close" aria-label="Close instrument menu">×</button></header>
+    <nav id="hardware-menu-pages" aria-label="Menu pages"></nav>
+    <div id="hardware-menu-body"></div>
+  </dialog>
   <dialog id="confirm-dialog"><form method="dialog"><p class="eyebrow">CONFIRM COMMAND</p><h2>Before continuing…</h2><p id="confirm-text"></p><div class="dialog-actions"><button value="cancel">Cancel</button><button value="confirm" class="danger">Confirm</button></div></form></dialog>
 </body>
 </html>

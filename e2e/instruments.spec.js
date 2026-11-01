@@ -54,7 +54,8 @@ for (const instrument of instruments) {
         else if (kind === 'select') await input.selectOption(String(value));
         else await input.click();
         expect(await messages(page)).toEqual([controlMessages(instrument.defaultChannel, control, value).flat()]);
-        if (control.physical && ['range', 'select'].includes(kind)) await expect(page.locator(`[id="hardware-${control.id}"]`)).toHaveValue(String(value));
+        const face = page.locator(`[id="hardware-${control.id}"]`);
+        if (await face.count() && ['range', 'select'].includes(kind)) await expect(face).toHaveValue(String(value));
       }
     }
     const range = instrument.controls.find((control) => control.kind === 'range');
@@ -79,11 +80,13 @@ for (const instrument of instruments) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     }
-    const physical = instrument.controls.find((control) => control.physical && control.hint);
-    if (physical) {
+    const physical = page.locator('#physical-controls .physical-control:visible .control-help').first();
+    if (await physical.count()) {
+      const id = await physical.evaluate((button) => button.closest('[data-parameter]').dataset.parameter);
+      const control = instrument.controls.find((control) => control.id === id);
       await page.keyboard.press('Tab');
-      await page.locator(`#physical-controls [data-parameter="${physical.id}"].physical-control .control-help`).focus();
-      await expect(page.locator('#control-tooltip')).toContainText(physical.hint);
+      await physical.focus();
+      await expect(page.locator('#control-tooltip')).toContainText(control.hint);
       await page.keyboard.press('Escape');
       await expect(page.locator('#control-tooltip')).toBeHidden();
     }
@@ -126,9 +129,9 @@ test('new keyboard notes release on original destination; failed Note Off blocks
   await expect(page.locator('#current-preset-name')).toHaveText('Preset 1');
 });
 test('physical knob drag sends only its parameter and numeric inputs reject non-integers', async ({ page }) => {
-  const instrument = instruments.find((item) => item.controls.some((control) => control.kind === 'range' && control.physical));
+  const instrument = instruments.find((item) => item.id === 'strymon-deco-v2');
   await open(page, instrument);
-  const control = instrument.controls.find((item) => item.kind === 'range' && item.physical);
+  const control = instrument.controls.find((item) => item.id === 'cc-12');
   const root = page.locator(`#physical-controls .physical-control[data-parameter="${control.id}"]`);
   await root.locator('.knob').scrollIntoViewIfNeeded();
   const box = await root.locator('.knob').boundingBox();

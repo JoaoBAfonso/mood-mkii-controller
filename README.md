@@ -13,7 +13,9 @@ Independent, English-language Web MIDI controllers for pedals, synthesizers and 
 - Full manual and MIDI manual links in every controller header.
 - Performance-first controls: MIDI numbers and precise numeric editors are optional via **MIDI values**; the monitor is collapsed by default. Continuous controls show useful endpoints and documented units, not generic percentages.
 - Help appears after **three seconds of continuous hover**; keyboard focus or tapping **?** opens it immediately. Leaving a control cancels pending hover help.
-- On-instrument editors expose every documented parameter without leaving the hardware panel; the optional **Parameter browser** retains section browsing and search.
+- Device-specific physical panels put controls in their actual hardware positions. Shared actuators switch locally between envelope, LFO or oscillator views without sending MIDI; secondary settings open compact menus from the instrument's own edit buttons.
+- Contextual menus follow the Mobius machine, EQ2 channel/band and PRO-VS oscillator being edited. Preset libraries are also available from the relevant physical-panel menu; the optional **Parameter browser** retains full section browsing and search.
+- Physical controls without a verified remote mapping are non-interactive visual references marked **◇**. Wide synthesizer panels retain their proportions on phones with local horizontal scrolling.
 - Hardware-inspired faders, capacitive keys, pedal mode diagrams and bipolar EQ displays complement rotary controls. Chase Bliss performance decks put bank navigation, modes and alternate parameters alongside the pedal.
 - Per-instrument local preset libraries with names, notes, favorites, search, pagination, JSON import/export and reorderable performance setlists.
 

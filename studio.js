@@ -1,5 +1,6 @@
-import { pedals } from './pedals.js?v=3.1.0';
-import { instruments } from './instruments.js?v=3.1.0';
+import { pedals } from './pedals.js?v=3.2.0';
+import { instruments } from './instruments.js?v=3.2.0';
+import { instrumentPanels } from './instrument-panels.js?v=3.2.0';
 
 const section = new URLSearchParams(location.search).get('section');
 if (section && !['pedals', 'synths'].includes(section)) {
@@ -26,13 +27,16 @@ for (const pedal of catalog) {
   preview.setAttribute('aria-hidden', 'true');
   if (legacy) preview.innerHTML = `<div class="mini-pedal"><div class="mini-knobs">${'<i></i>'.repeat(6)}</div><div class="mini-toggles"><i></i><i></i><i></i></div><div class="mini-logo">${pedal.title}<small>${pedal.edition || 'L + R'}</small></div><div class="mini-switches"><i></i><i></i></div></div>`;
   else {
-    for (const [key, value] of Object.entries(pedal.appearance)) if (key !== 'layout') preview.style.setProperty(`--device-${key}`, value);
+    const panel = instrumentPanels[pedal.id];
+    for (const [key, value] of Object.entries({ ...pedal.appearance, surface: panel.surface, ink: panel.ink, accent: panel.accent })) if (key !== 'layout') preview.style.setProperty(`--device-${key}`, value);
     const hardware = document.createElement('div'); hardware.className = `instrument-preview preview-${pedal.id} preview-${pedal.appearance.layout}`;
     const maker = document.createElement('span'); maker.textContent = pedal.brand;
-    const knobs = document.createElement('div'); knobs.className = 'preview-knobs';
-    const physical = pedal.controls.filter((control) => control.physical && !control.eqBand);
-    for (const control of physical.slice(0, pedal.appearance.layout === 'drum' ? 11 : 8)) {
-      const mark = document.createElement('i'); mark.className = control.visual || control.kind; knobs.append(mark);
+    const knobs = document.createElement('div'); knobs.className = 'preview-face';
+    knobs.style.aspectRatio = String(panel.ratio);
+    for (const slot of [...panel.slots, ...(panel.references || []), ...(panel.eq ? [{ x: 34, y: 36, w: 32, h: 20, visual: 'knob' }] : [])]) {
+      const mark = document.createElement('i'); mark.className = `preview-${slot.visual}`;
+      for (const [key, value] of Object.entries({ left: slot.x, top: slot.y, width: slot.w, height: slot.h })) mark.style[key] = `${value}%`;
+      knobs.append(mark);
     }
     if (pedal.id === 'source-audio-eq2') {
       const screen = document.createElement('div'); screen.className = 'preview-eq';

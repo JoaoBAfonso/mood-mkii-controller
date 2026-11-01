@@ -1,0 +1,176 @@
+.replica-page .instrument-workspace{display:block}
+.replica-page .instrument-intro{padding:18px 0}.replica-page .instrument-intro h1{font-size:36px;margin:6px 0}
+.replica-page .instrument-scene{min-width:0}
+.hardware-viewport{overflow-x:auto;overscroll-behavior-x:contain;padding:12px 8px 22px;max-width:100%;scrollbar-color:#747d76 #e0e5e1}
+.replica-page #hardware{container-type:inline-size;width:var(--panel-width);min-width:var(--panel-min-width);max-width:100%;margin:0 auto;padding:0;border:2px solid #1119;border-radius:7px;background:var(--device-surface);color:var(--device-ink);box-shadow:0 6px 0 #20232255,0 12px 18px #0002}
+.replica-page #physical-controls{display:block;position:relative;width:100%;margin:0;overflow:visible}
+.panel-position{position:absolute!important;left:var(--x);top:var(--y);width:var(--w);height:var(--h,auto)}
+.replica-page .hardware-heading{display:none}
+.replica-page.layout-keyboard .hardware-heading{display:flex;border:0;padding:6px 15px;line-height:1}
+.replica-page .hardware-heading>span{font-size:10px}.replica-page .hardware-heading>strong{font-size:19px}
+.replica-page .actuator>.control{position:relative;height:100%;min-height:0;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;background:transparent;border:0;color:inherit}
+.replica-page .actuator>.control>label{font:600 clamp(8px,1.9cqw,12px)/1.1 Arial,sans-serif;color:inherit;min-height:0;padding:0;text-align:center;letter-spacing:.02em;max-width:100%;order:1}
+.replica-page.layout-keyboard .actuator>.control>label,.replica-page.layout-drum .actuator>.control>label{font-size:clamp(8px,.8cqw,11px)}
+.replica-page #hardware .knob{position:relative;flex-shrink:0;width:65%;height:auto;aspect-ratio:1;max-width:66px;min-width:24px;margin:0 auto 3px;border:3px solid #111;border-radius:50%;background:radial-gradient(circle at 50% 50%,#252929 0 58%,transparent 59%),repeating-conic-gradient(#151b1b 0deg 10deg,#3c4340 10deg 20deg);box-shadow:0 3px 3px #0009,0 0 0 1px #ffffff55}
+.replica-page #hardware .knob-mark{inset:4px;background:none}.replica-page #hardware .knob-mark:before{height:30%;width:3px;top:0;background:#eeeee6}
+.replica-page .actuator .control>input[type=range]:not(.fader-input){position:absolute;bottom:0;left:0;width:100%;height:16px;min-height:0;opacity:0;margin:0;z-index:0}
+.replica-page .actuator-fader .control>input[type=range]{position:relative!important;opacity:1!important;height:75%!important;width:28px!important;min-height:0;inset:auto;writing-mode:vertical-lr;direction:rtl;appearance:none;background:transparent;margin:3px auto!important;cursor:ns-resize}
+.replica-page .actuator-fader .control>label{order:-1;height:16%;font-size:8px}
+.replica-page .actuator-fader input[type=range]::-webkit-slider-runnable-track{background:linear-gradient(90deg,#181b1a 40%,#060909 40% 60%,#3c423e 60%);width:7px;border:1px solid #191c1b;border-radius:1px;box-shadow:1px 0 0 #92978b}
+.replica-page .actuator-fader input[type=range]::-webkit-slider-thumb{appearance:none;width:25px;height:9px;border:1px solid #202724;background:linear-gradient(#ced4ca 0 35%,#343c37 35% 60%,#888f84 60%);border-radius:1px;box-shadow:0 2px 3px #0009}
+.replica-page .actuator .value-row{position:absolute;bottom:-16px;left:0;width:100%;min-height:0;justify-content:center;order:2;pointer-events:none;z-index:6}
+.replica-page .actuator .readout{display:none;font:10px monospace;background:#152b2c;color:#e7f1dd;padding:3px 5px;border-radius:3px;white-space:nowrap}
+.replica-page .actuator .control:focus-within .readout,.replica-page .actuator .control:hover .readout{display:block}
+.replica-page .actuator .control-bounds,.replica-page .actuator .control-possibilities{display:none}
+.replica-page .actuator .control-help{width:18px;min-height:18px;line-height:18px;top:0;right:-2px;background:#0002;color:inherit;opacity:.7;font-size:9px}
+.replica-page .actuator-fader .control-help{top:auto;bottom:-16px}
+.replica-page .actuator>.control:focus-within{outline:1px solid var(--device-accent);outline-offset:3px;border-radius:4px}
+.replica-page .actuator .control>select{width:100%;max-width:100%;min-height:25px;font:10px Arial,sans-serif;background:#15262a;color:#e8efdc;border:1px solid #8b978d;border-radius:3px;padding:2px;margin:0;order:2}
+.replica-page #hardware .actuator-algorithm .control>.selector-dial{position:absolute;left:34%;top:26%;width:32%;margin:0;max-width:60px}
+.replica-page .actuator-algorithm .control>label{position:absolute;left:31%;top:67%;width:38%;margin:0;font-size:10px}
+.replica-page .actuator-algorithm .control>select{position:absolute;left:33%;top:25%;width:34%;height:32%;opacity:0;z-index:2;cursor:pointer}
+.replica-page .algorithm-legend{position:absolute;inset:0 0 18%;pointer-events:none}
+.replica-page .algorithm-legend span{position:absolute;font:600 clamp(7px,1.2cqw,9px)/1.1 Arial,sans-serif;text-transform:uppercase;text-align:center;max-width:28%}
+.replica-page .selected-choice{font:9px monospace;position:absolute;bottom:0;max-width:100%;overflow-wrap:anywhere}
+.replica-page .actuator:not(.actuator-algorithm) .selected-choice{display:none}
+.replica-page .actuator:not(.actuator-algorithm) .selector-dial+label+select{min-height:21px;font-size:9px}
+.replica-page .actuator-footswitch .control>button:not(.control-help),.replica-page .physical-tap{width:52%;height:auto;aspect-ratio:1;border-radius:50%;min-height:0;max-width:56px;margin:6px auto;border:5px ridge #c6c9bf;background:linear-gradient(125deg,#71766f,#d9dcd3,#7d847d);box-shadow:0 4px 2px #0008;color:transparent;font-size:0;padding:0;order:2}
+.replica-page .actuator-footswitch .control>label{order:0;margin-bottom:6px}
+.replica-page .actuator-footswitch .control:before{content:"";position:absolute;top:24%;left:calc(50% - 3px);width:6px;height:6px;border:1px solid #19231d;border-radius:50%;background:#3e4940;box-shadow:0 0 0 1px #dce4d6}
+.replica-page .actuator-footswitch .control:has(button.active):before{background:var(--device-accent);box-shadow:0 0 6px var(--device-accent)}
+.replica-page .actuator-footswitch .control>button.active{box-shadow:0 4px 2px #0008,0 0 0 3px var(--device-accent)}
+.replica-page .actuator-footswitch .control>select{display:none}
+.replica-page .actuator-button .control>button:not(.control-help){min-height:16px;width:90%;font-size:0;height:20px;padding:0;background:#b1b4b0;border:2px ridge #e4e6db;border-radius:3px;order:0}
+.replica-page .actuator-button .control>button.active{background:var(--device-accent);box-shadow:0 0 8px var(--device-accent)}
+.replica-page .panel-marking{text-align:center;font:600 clamp(8px,1.8cqw,12px)/1.1 Arial,sans-serif;pointer-events:none;letter-spacing:.06em;white-space:normal}
+.replica-page.layout-keyboard .panel-marking,.replica-page.layout-drum .panel-marking{font-size:clamp(8px,.9cqw,12px)}
+.replica-page .marking-logo{font:800 clamp(20px,6.5cqw,54px)/1 Arial,sans-serif;letter-spacing:-.04em}
+.replica-page .marking-brand{font:700 clamp(14px,3.5cqw,30px)/1 Arial,sans-serif;letter-spacing:-.04em}
+.replica-page .marking-model{font:700 clamp(14px,3cqw,25px)/1 Arial,sans-serif}
+.replica-page .panel-menu-button{min-height:20px;height:auto;min-width:0;padding:3px 4px;background:#101d2088;color:var(--device-ink);border:1px solid #bfc8bb55;border-radius:3px;font:600 clamp(8px,1.5cqw,10px)/1.1 Arial,sans-serif;white-space:normal;letter-spacing:.02em;box-shadow:0 1px 1px #0006}
+.replica-page.layout-keyboard .panel-menu-button,.replica-page.layout-drum .panel-menu-button{font-size:8px;min-height:18px}
+.replica-page .panel-menu-button:hover,.replica-page .panel-menu-button:focus-visible{background:var(--device-accent);color:#111}
+.replica-page .panel-bank{display:flex;align-items:center;gap:2px;height:auto}
+.replica-page .panel-bank button{flex:1;min-width:0;min-height:20px;padding:3px 2px;font-size:9px;background:#192329;color:#d5dfd3;border:1px solid #97a48c;border-radius:2px}
+.replica-page .panel-bank button[aria-pressed=true]{background:var(--device-accent);color:#111}
+.hardware-reference{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;pointer-events:none;opacity:.85}
+.hardware-reference>span{font:600 clamp(8px,1.6cqw,11px)/1.1 Arial,sans-serif;text-align:center}
+.layout-keyboard .hardware-reference>span,.layout-drum .hardware-reference>span{font-size:8px}
+.reference-shape{display:block;width:60%;max-width:50px;aspect-ratio:1;background:radial-gradient(circle,#313636 55%,#101414 60% 70%,#79807c 72% 75%,transparent 77%);border-radius:50%;box-shadow:0 2px 2px #0006;flex-shrink:0}
+.reference-fader .reference-shape{border:1px solid #0c0e0e;border-radius:0;width:6px;height:70%;aspect-ratio:auto;background:linear-gradient(#131a17 40%,#a9b0a6 40% 47%,#131a17 47%);box-shadow:1px 0 0 #7c847b}
+.reference-button .reference-shape,.reference-buttons .reference-shape{border-radius:3px;width:75%;height:22px;aspect-ratio:auto;background:linear-gradient(#757c79,#28322e);border:2px ridge #7a847c}
+.reference-stacked .reference-shape{width:70%;max-width:45px;background:radial-gradient(circle,#161a19 38%,#4d534a 43% 59%,#0a1311 60%);box-shadow:0 0 0 5px #101a1988}
+.reference-matrix .reference-shape{width:100%;max-width:none;height:82%;border-radius:0;aspect-ratio:auto;background:radial-gradient(circle,#b6a16c 0 2px,transparent 2.5px) 0 0/14% 20%,repeating-linear-gradient(0deg,transparent 0 19%,#919890 19% 20%);box-shadow:none}
+.reference-joystick .reference-shape{width:90%;max-width:none;border-radius:50%;border:3px solid #111;background:radial-gradient(circle at 50% 45%,#757872 0 36%,#41453f 37% 55%,#111817 65%);box-shadow:0 4px 7px #000a}
+.reference-boss-treadle .reference-shape{width:100%;max-width:none;height:90%;aspect-ratio:auto;border-radius:6px;background:repeating-linear-gradient(0deg,#171c1a 0 2px,#252a27 2px 4px);border:7px solid #101715;box-shadow:0 3px 0 #0008}
+.reference-boss-treadle>span{position:absolute;top:12%;font-size:26px;color:#4e5550;letter-spacing:.06em}
+.reference-boss-treadle:after{content:"◇";position:absolute;right:10px;bottom:15%;font-size:12px;color:#90998e}
+.device-display{display:block;font:12px monospace;padding:7px;background:#111d1c;color:#cad79c;border:3px inset #252c27;overflow:hidden;border-radius:2px;overflow-wrap:anywhere}
+.display-segment{color:#b0ed40;background:#0e140b;font-size:clamp(14px,3.3cqw,24px);letter-spacing:.05em;text-transform:uppercase}
+.display-oled{background:#071927;color:#78d3f8}.display-lcd{background:#b7c6b8;color:#1c2a29;border-color:#636e65}
+.external-display{max-width:var(--panel-width,660px);width:max-content;max-width:100%;margin:0 auto 8px;padding:4px 10px;font-size:11px;color:var(--muted);border:0;background:transparent;text-align:center}
+.hardware-legend{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin:0 0 16px}
+.hardware-menu{width:min(660px,calc(100vw - 24px));max-height:min(660px,calc(100dvh - 32px));padding:20px;overflow:auto;border:2px solid #6a7b71;border-radius:8px;background:#f0f2ec;color:#25322d;box-shadow:0 16px 60px #0006}
+.hardware-menu::backdrop{background:#0b171bb0}
+.hardware-menu .control-tooltip{pointer-events:none}
+.hardware-menu>header{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #bfcbc2;padding-bottom:12px}
+.hardware-menu h2{font-size:20px;margin:4px 0}.hardware-menu .eyebrow{font-size:10px;margin:0}
+.hardware-menu>header>button{font-size:24px;padding:3px 12px;min-height:36px}
+#hardware-menu-pages{display:flex;gap:5px;flex-wrap:wrap;margin:12px 0}
+#hardware-menu-pages button{min-height:30px;font-size:10px;padding:5px 8px;border-radius:3px}
+#hardware-menu-pages button[aria-pressed=true]{background:#304e46;color:#f2f4ea}
+#hardware-menu-body .control-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#hardware-menu-body .control{padding:10px;background:white}#hardware-menu-body .control>label{font-size:12px}
+#hardware-menu-body .control-possibilities{display:none}
+.replica-page .control-area{margin:20px 0 0}.replica-page .technical-switch{margin-top:12px}
+.replica-page #note-controls{position:relative;padding:8px 12px 12px}.replica-page #note-controls:empty{display:none}
+.replica-page .note-options{position:absolute;left:10px;bottom:10px;margin:0;z-index:4;max-width:14%;font-size:9px}
+.replica-page .note-options label{display:none}
+.replica-page .instrument-keys{margin:0 0 0 14%;height:130px;border:2px solid #171b19;border-radius:0;background:#131917}
+.replica-page .instrument-keys button{height:126px;padding:100px 0 0;font-size:8px;border-radius:0 0 2px 2px;background:linear-gradient(90deg,#dcdfd6,#fcfff5,#e5e8df)}
+.replica-page .instrument-keys .black-key{height:78px;padding-top:59px;background:linear-gradient(90deg,#0d1311,#303933,#0d1311)}
+.replica-page .instrument-keys button.active{box-shadow:inset 0 -8px 0 var(--device-accent);color:#162c23}
+.replica-page #note-controls>label{position:absolute;left:3%;bottom:40px;font-size:9px;width:6%;height:75px}
+.replica-page #pitch-bend{writing-mode:vertical-lr;direction:rtl;width:25px;height:65px;margin:6px 0 0;accent-color:var(--device-accent)}
+.replica-page #transport-controls{display:flex;justify-content:center;gap:8px;margin:0;padding:0 8px 10px}
+.replica-page #transport-controls:empty{display:none}.replica-page #transport-controls button{min-height:26px;font-size:10px}
+.replica-page[data-instrument="boss-sl-2"] #hardware{border:3px solid #173c35;box-shadow:0 5px 0 #153832,0 9px 16px #0003}
+.replica-page[data-instrument="boss-sl-2"] #physical-controls:before{content:"";position:absolute;inset:3% 2% 64%;border:2px solid #a2b9a7;background:#151b1b}
+.replica-page[data-instrument="boss-sl-2"] .hardware-reference:not(.reference-boss-treadle){color:#e2e5d6}
+.replica-page[data-instrument="boss-sl-2"] .panel-marking:nth-of-type(2){color:#d6dbd0}
+.replica-page[data-instrument="strymon-deco-v2"] #hardware{background:repeating-linear-gradient(90deg,#b8bab6 0 1px,#c1c3be 1px 3px);border:2px solid #969b92}
+.replica-page[data-instrument="strymon-deco-v2"] #physical-controls:before{content:"";position:absolute;left:50%;top:10%;height:48%;border-left:1px dashed #333}
+.replica-page[data-instrument="strymon-deco-v2"] #hardware .knob{background:radial-gradient(circle,#bfc6c0 0 43%,#e6ebe2 44% 51%,#171e1a 54% 64%,transparent 65%),repeating-conic-gradient(#171e1a 0deg 10deg,#3e4c41 10deg 20deg)}
+.replica-page[data-instrument="strymon-deco-v2"] .marking-logo{font-weight:900;letter-spacing:.02em;-webkit-text-stroke:1px #222;color:transparent}
+.replica-page[data-instrument="strymon-deco-v2"] .panel-menu-button{background:#555a5222;color:#18231b}
+.replica-page[data-instrument="strymon-mobius"] #hardware{background:repeating-linear-gradient(90deg,#0975a8 0 2px,#107daf 2px 3px)}
+.replica-page[data-instrument="strymon-mobius"] #hardware .knob{background:conic-gradient(#333c38,#86968d,#252c27,#6b7b70,#333c38)}
+.replica-page[data-instrument="strymon-mobius"] .marking-logo{font-family:Georgia,serif}
+.replica-page[data-instrument="source-audio-eq2"] #hardware{background:repeating-linear-gradient(90deg,#263659 0 2px,#2e3d61 2px 3px)}
+.replica-page .eq-screen{padding:0}.replica-page .eq-bars{margin:0;height:82%;gap:3px;padding:4px;border:4px solid #11181c;background:#141b24;background-image:linear-gradient(transparent 48%,#ced96a77 49% 50%,transparent 51%)}
+.replica-page .eq-bars button{border-radius:0}.replica-page .eq-bars button i{background:#d8e48f;width:50%;left:25%}
+.replica-page .eq-bars button small{font:8px monospace;bottom:0;color:#d5ddad}
+.replica-page .eq-selectors{height:18%;justify-content:space-between;gap:3px;padding-top:3px}
+.replica-page .eq-selectors label{font-size:8px;gap:3px}.replica-page .eq-selectors select{font-size:9px;min-height:19px;height:19px;padding:0 2px;max-width:40px}
+.replica-page .eq-encoder{margin:0;max-width:none}.replica-page .eq-encoder>.control{height:100%;padding:0}
+.replica-page .eq-encoder .control>label{display:none}.replica-page .eq-encoder input[type=range]{height:12px;opacity:.25;min-height:0}
+.replica-page .eq-encoder .value-row{margin-top:0;min-height:0}.replica-page .eq-encoder .readout{font:9px monospace}
+.replica-page .eq-encoder .control-bounds,.replica-page .eq-encoder .control-possibilities{display:none}
+.replica-page[data-instrument="source-audio-eq2"] #hardware .knob{width:72%;max-width:76px;background:conic-gradient(#d0d5cb,#9aaba0,#e6ebe1,#7d8f81,#d0d5cb)}
+.replica-page[data-instrument="source-audio-eq2"] .marking-logo{color:transparent;-webkit-text-stroke:1px #efeee1}
+.replica-page[data-instrument="source-audio-nemesis-adt"] #hardware{background:repeating-linear-gradient(90deg,#252a29 0 2px,#2b302f 2px 3px)}
+.replica-page[data-instrument="source-audio-nemesis-adt"] #hardware .knob{background:linear-gradient(90deg,#1b211f 0 24%,#4f5851 24% 32%,#141b18 32% 68%,#414b43 68% 76%,#171e1b 76%)}
+.replica-page[data-instrument="empress-reverb"] #hardware{background:#dbdce4}
+.replica-page[data-instrument="empress-reverb"] #physical-controls:before{content:"";position:absolute;inset:63% 0 0;background:linear-gradient(168deg,transparent 0 28%,#58b9c0 29% 35%,transparent 36% 38%,#dd526e 39% 52%,transparent 53% 58%,#58b9c0 59% 64%,transparent 65%)}
+.replica-page[data-instrument="empress-reverb"] #hardware .knob{background:conic-gradient(#f5f4f5,#c4c4d4,#f9f8fc,#aaa9b9,#f5f4f5);border-color:#e5e4ee;box-shadow:0 3px 4px #45444c77}
+.replica-page[data-instrument="empress-reverb"] #hardware .knob-mark:before{background:#2d2e37}
+.replica-page[data-instrument="empress-reverb"] .marking-logo{font-family:Georgia,serif;font-weight:900}
+.replica-page[data-instrument="empress-reverb"] #hardware .actuator-algorithm .selector-dial{left:7%;top:0;width:32%}
+.replica-page[data-instrument="empress-reverb"] .actuator-algorithm .control>select{left:7%;top:0;width:32%;height:32%}
+.replica-page[data-instrument="empress-reverb"] .actuator-algorithm .control>label{display:none}
+.replica-page[data-instrument="empress-reverb"] .algorithm-legend span{max-width:43%;text-transform:none;font-size:10px;text-align:left}
+.replica-page[data-instrument="empress-reverb"] .panel-menu-button{color:#283032;background:#b0b5b366}
+.replica-page[data-instrument="deepmind-12"] #hardware{border-inline:12px solid #733d32;border-radius:2px}
+.replica-page[data-instrument="deepmind-12"] .actuator-fader .control>label{font-weight:400;font-size:8px;line-height:1.05;order:-1}
+.replica-page[data-instrument="deepmind-12"] .display-lcd{font-size:12px;background:repeating-linear-gradient(0deg,#cbd1cb 0 1px,#bfc6bf 1px 2px)}
+.replica-page[data-instrument="deepmind-12"] .panel-bank button{min-height:16px;font-size:8px;padding:2px}
+.replica-page[data-instrument="deepmind-12"] .actuator-fader input[type=range]{height:72%!important}
+.replica-page[data-instrument="microfreak"] #hardware{border:5px solid #222728;border-radius:14px;background:#232a2c}
+.replica-page[data-instrument="microfreak"] .actuator-orange .knob{background:#f5761e!important;border-color:#ad440f;box-shadow:0 3px 3px #0009}
+.replica-page[data-instrument="microfreak"] .panel-marking{border-top:1px solid #adbbb6;padding-top:3px}
+.replica-page[data-instrument="microfreak"] #note-controls{padding-top:42px}
+.replica-page[data-instrument="microfreak"] .instrument-keys{margin-left:0;height:115px;border:4px solid #393f3c}
+.replica-page[data-instrument="microfreak"] .instrument-keys button{height:107px;padding-top:87px;color:#272b28;background:repeating-linear-gradient(90deg,transparent 0 3px,#b98436 3px 4px),repeating-linear-gradient(0deg,#dddccf 0 6px,#a29b80 6px 7px)}
+.replica-page[data-instrument="microfreak"] .instrument-keys .black-key{height:74px;padding-top:54px;background:repeating-linear-gradient(0deg,#191e1a 0 3px,#bc954e 3px 4px);color:#f0da9a}
+.replica-page[data-instrument="microfreak"] #note-controls>label{left:60%;top:15px;width:35%;height:18px;color:#d8b677}
+.replica-page[data-instrument="microfreak"] #pitch-bend{writing-mode:horizontal-tb;direction:ltr;width:100%;height:12px;min-height:0;margin:0}
+.replica-page .actuator-touch .control>input[type=range]{position:relative!important;opacity:1!important;height:10px!important;min-height:0;inset:auto;background:repeating-linear-gradient(90deg,#b6a07e 0 2px,#463e33 2px 5px);order:1}
+.replica-page .actuator-touch .control>label{font-size:8px!important;order:0}
+.replica-page[data-instrument="microfreak"] .actuator-button.panel-position .control>button{height:14px;min-height:14px}
+.replica-page .actuator>.control>input[type=range]:focus-visible{opacity:.5}
+.replica-page .hardware-reference.reference-joystick>span{font-size:9px}
+.replica-page .physical-tap{cursor:pointer}
+.replica-page .actuator-encoder .control>select{position:absolute;left:17%;top:0;width:66%;height:75%;opacity:0;cursor:pointer}
+.keyboard-performance{padding:16px;background:white;border-radius:6px}.keyboard-performance label{display:grid;gap:10px;font-size:12px}.keyboard-performance input{width:100%}
+.replica-page[data-instrument="pro-vs-mini"] #hardware{border:5px solid #171d1b;border-radius:14px;background:repeating-linear-gradient(0deg,#262928 0 2px,#232625 2px 4px)}
+.replica-page[data-instrument="pro-vs-mini"] .panel-marking:not(.marking-logo){background:#288dbc;color:#f1f4f1;font-style:italic}
+.replica-page[data-instrument="pro-vs-mini"] .marking-logo{color:#49aedd;font-style:italic;font-size:30px}
+.replica-page[data-instrument="pro-vs-mini"] .panel-bank{flex-wrap:wrap}
+.replica-page[data-instrument="pro-vs-mini"] .panel-bank button{flex-basis:40%;border-radius:3px;min-height:18px}
+.replica-page[data-instrument="pro-vs-mini"] .instrument-keys{margin:0;height:85px}
+.replica-page[data-instrument="pro-vs-mini"] #note-controls{padding-top:24px}
+.replica-page[data-instrument="pro-vs-mini"] .instrument-keys button{height:81px;padding-top:61px;background:#303734;color:#dce3d8}
+.replica-page[data-instrument="pro-vs-mini"] .instrument-keys .black-key{height:54px;padding-top:36px;background:repeating-linear-gradient(45deg,#15201b 0 3px,#a8b4a4 3px 4px);color:#f4f6e7}
+.replica-page[data-instrument="tr-8s"] #hardware{border-top:5px solid #606565;border-radius:4px}
+.replica-page[data-instrument="tr-8s"] .actuator-fader input[type=range]::-webkit-slider-runnable-track{border:1px solid var(--device-accent);background:#101914;box-shadow:none;width:8px}
+.replica-page[data-instrument="tr-8s"] .device-display{font-size:12px;color:#cad68d;background:#242b17;border-color:#111a0e}
+.replica-page[data-instrument="tr-8s"] #note-controls{margin-top:0;padding:0 12px 8px 17%}
+.replica-page[data-instrument="tr-8s"] .drum-pads{grid-template-columns:repeat(11,minmax(0,1fr));gap:6px;margin:0 21% 0 0}
+.replica-page[data-instrument="tr-8s"] .drum-pads button{padding:3px 0;min-height:23px;height:23px;background:#202d28;color:#8ee8c0;border:1px solid #35594a;border-radius:2px;font-size:8px}
+.replica-page[data-instrument="tr-8s"] .note-options{left:79%;top:0;bottom:auto;max-width:20%}
+.replica-page[data-instrument="tr-8s"] #alternate-hits{min-height:22px;font-size:9px;padding:2px 6px;background:#243d35;color:#7eeac3}
+.hardware-steps{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:6px;margin:14px 0 0}
+.hardware-steps span{height:38px;background:linear-gradient(#d0d9c9,#858e88);border:2px ridge #53655b;border-radius:2px;color:#20332a;font:9px monospace;padding:4px;text-align:center;box-shadow:0 3px 1px #0006}
+.hardware-steps span:nth-child(-n+4){border-top:4px solid #d75b59}.hardware-steps span:nth-child(n+5):nth-child(-n+8){border-top:4px solid #e8a753}.hardware-steps span:nth-child(n+9):nth-child(-n+12){border-top:4px solid #72cbaf}.hardware-steps span:nth-child(n+13){border-top:4px solid #ab97cc}
+@media(max-width:760px){.replica-page .instrument-intro h1{font-size:28px}.replica-page .hardware-viewport #hardware{max-width:none}.replica-page.layout-compact .hardware-viewport #hardware,.replica-page.layout-wide .hardware-viewport #hardware{max-width:100%}.replica-page #hardware{border-inline-width:4px}.hardware-menu{padding:14px}.hardware-legend{justify-content:start;font-size:10px}}
+@media(max-width:380px){#hardware-menu-body .control-grid{grid-template-columns:minmax(0,1fr)}.replica-page .actuator .control-help{width:16px;min-height:16px;font-size:8px}}

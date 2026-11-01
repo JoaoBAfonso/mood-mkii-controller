@@ -14,6 +14,7 @@ export function createHelpTooltip() {
   }
   function show(entry) {
     hide(); active = entry;
+    (entry.root.closest('dialog[open]') || document.body).append(tip);
     tip.textContent = entry.text();
     if (!tip.textContent) { hide(); return; }
     tip.hidden = false;
