@@ -31,6 +31,7 @@ jobs:
           mkdir _site
           cp index.html controller.html instrument.html styles.css instruments.css replicas.css studio.js app.js instrument-app.js instrument-panels.js pedals.js instruments.js instrument-pedals.js instrument-synths.js controls.js midi.js presets.js help.js tooltip.js icon.svg _site/
           cp -R assets _site/
+          cp journal.html journal.css journal.js journal-store.js _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

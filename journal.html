@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101216">
+  <meta name="description" content="A local-first personal sound journal. Collect compositions, sketches and recordings.">
+  <title>Sound Journal · MIDI Studio</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="journal.css?v=3.3.0">
+  <script type="module" src="journal.js?v=3.3.0"></script>
+</head>
+<body>
+  <header class="topbar"><a href="./">← MIDI STUDIO</a><span class="local-badge">ON THIS DEVICE</span></header>
+  <main>
+    <section class="intro"><p class="eyebrow">YOUR PERSONAL SOUND JOURNAL</p><h1>Keep the sound.<br><em>Follow the idea.</em></h1><p>A home for finished compositions, evolving pieces and the moments worth keeping.</p></section>
+    <div id="notification" role="alert" hidden></div>
+    <section class="capture surface" aria-label="Capture and import">
+      <div class="capture-heading"><div><p class="eyebrow">CAPTURE SOMETHING NEW</p><h2>From a file. Or from right now.</h2></div><button id="import-audio" class="primary" disabled>+ Import audio</button></div>
+      <input id="audio-files" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.ogg,.oga,.opus,.flac,.aiff,.aif,.webm" multiple hidden>
+      <div class="recorder">
+        <label>Recording title<input id="recording-title" placeholder="A new moment"></label>
+        <div class="record-actions"><button id="record" disabled><span class="record-dot" aria-hidden="true"></span> Record</button><button id="stop-recording" hidden>Stop &amp; save</button><output id="recording-time" aria-label="Recording duration">00:00</output></div>
+        <p id="recording-status" role="status">Record from your microphone or the audio input selected in your browser. New takes go to Recordings.</p>
+        <div id="recovery" hidden><p>Your take is available below. Download it before leaving this page.</p><audio id="recovery-player" controls></audio><a id="recovery-download" download>Download unsaved take</a><button id="retry-recording">Retry saving</button></div>
+      </div>
+    </section>
+    <section class="collection" aria-label="Sound collection">
+      <div class="collection-heading"><div><p class="eyebrow">THE COLLECTION</p><h2>Your sounds <span id="entry-count">0</span></h2></div><span id="storage-status" role="status">Opening local library…</span></div>
+      <nav id="section-filters" aria-label="Journal sections"></nav>
+      <div class="filters"><label>Search<input id="search" type="search" placeholder="Title, notes or tags"></label><label>Tag<select id="tag-filter"><option value="">All tags</option></select></label><label>Sort<select id="sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title A–Z</option></select></label></div>
+      <p id="results-count" role="status"></p>
+      <div id="entries"></div>
+      <div id="empty" class="empty surface"><span aria-hidden="true">≋</span><h3>A quiet space, ready for a sound.</h3><p>Import your first composition or record a sketch above.</p></div>
+      <button id="show-more" hidden>Show more sounds</button>
+    </section>
+    <details class="surface backup"><summary>Local storage &amp; backup</summary><p>This first draft stores audio and notes in this browser, on this device. Nothing is uploaded. It is not an account-protected vault: anyone using this browser profile can open it. Clearing browser data can erase the library.</p><p>Export a backup regularly. It includes all audio and metadata; keep it somewhere safe. Large libraries need memory and disk space to export. Google Drive sync and dedicated MIDI modules will be added separately.</p><div class="backup-actions"><button id="export-backup" disabled>Export full backup</button><button id="restore-backup" disabled>Restore backup</button><button id="persistent-storage" disabled>Request durable storage</button></div><input id="backup-file" type="file" accept=".json,application/json" hidden></details>
+    <noscript>Enable JavaScript to use the local sound journal.</noscript>
+  </main>
+  <footer>LOCAL-FIRST · NO UPLOADS · YOUR SOUND, YOUR DEVICE</footer>
+  <dialog id="edit-dialog"><form id="edit-form"><p class="eyebrow">SHAPE THE ENTRY</p><h2>Edit sound</h2><p id="edit-error" role="alert" hidden></p><label>Title<input id="edit-title" required maxlength="200"></label><label>Section<select id="edit-section"></select></label><label>Tags<input id="edit-tags" maxlength="1000" placeholder="ambient, guitar, late night"></label><label>Notes<textarea id="edit-notes" rows="4" maxlength="10000" placeholder="What is this becoming?"></textarea></label><div class="dialog-actions"><button type="button" id="cancel-edit">Cancel</button><button class="primary" type="submit">Save changes</button></div></form></dialog>
+</body>
+</html>

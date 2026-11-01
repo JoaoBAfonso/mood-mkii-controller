@@ -4,7 +4,17 @@ Independent, English-language Web MIDI controllers for pedals, synthesizers and 
 
 **Website:** https://JoaoBAfonso.github.io/mood-mkii-controller/
 
+## Testing the Sound Journal
+
+Open **Sound Journal** from the initial hub, in Chrome or Edge. Choose a section and **Import audio**, or enter a recording title and press **Record**, grant microphone permission, then **Stop & save**. Recordings always go to **Recordings**; imports go to the selected section, or **Sketches** from All sounds.
+
+Each entry offers a player, original-file download, editing and confirmed deletion. Add comma-separated tags and notes via **Edit**, then combine section, search and tag filters. The library is local to this origin and browser profile; a localhost preview and the published GitHub Pages site have separate libraries. Use **Local storage & backup → Export full backup / Restore backup** to transfer them. Restoring merges entries by ID, with confirmation before replacing matches.
+
+The recorder uses the browser-selected microphone/audio input, not Web MIDI or an automatic system-audio feed. Playback depends on the browser's codec support; unsupported originals remain downloadable. If saving a take fails, its player and download remain available with a retry button. Keep regular backups: local storage is not a substitute for an archived copy or a password-protected private cloud library.
+
 ## Features
+
+- **Sound Journal**: a separate dark/orange, local-first audio diary with Released, Work in Progress, Sketches and Recordings; audio import, players, notes, tags, section/search/tag filters and microphone recording. Audio and metadata persist in IndexedDB on the current browser profile. Full JSON backup export/restore includes audio; nothing is uploaded. This is not authentication or encryption, and clearing browser storage can erase it. Google Drive integration and dedicated journal MIDI modules are deferred.
 
 - Ten pedal controllers and four synthesizer/drum-machine controllers, with bookmarkable routes and original hardware-inspired illustrations.
 - MOOD MKII: 61 CCs; Lost + Found: 51; Generation Loss MKII: 41; BAD MOOD: 62. Commands are based on each model's manual, not inherited indiscriminately.

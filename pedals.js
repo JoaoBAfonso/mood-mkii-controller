@@ -1,4 +1,4 @@
-import { controls as moodControls, controlValueLabel as moodLabel, controlEndpoints as moodEndpoints, positionLabel, hiddenPedalMap, manualUrl, range, select, toggle, action, options, three } from './controls.js?v=3.2.1';
+import { controls as moodControls, controlValueLabel as moodLabel, controlEndpoints as moodEndpoints, positionLabel, hiddenPedalMap, manualUrl, range, select, toggle, action, options, three } from './controls.js?v=3.3.0';
 
 const save = () => ({ cc: 111, name: 'Save to pedal', group: 'presets', kind: 'save', confirmation: 'Save to this pedal slot? The existing preset will be overwritten.' });
 const reset = () => action(56, 'Factory reset', 'maintenance', 1, 'WARNING: run FACTORY RESET? This may erase presets and settings.');

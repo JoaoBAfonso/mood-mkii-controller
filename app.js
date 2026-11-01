@@ -1,8 +1,8 @@
-import { getPedal } from './pedals.js?v=3.2.1';
-import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=3.2.1';
-import { createPresetManager } from './presets.js?v=3.2.1';
-import { controlHelp, controlName, controlChoices, modeDetail } from './help.js?v=3.2.1';
-import { createHelpTooltip } from './tooltip.js?v=3.2.1';
+import { getPedal } from './pedals.js?v=3.3.0';
+import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=3.3.0';
+import { createPresetManager } from './presets.js?v=3.3.0';
+import { controlHelp, controlName, controlChoices, modeDetail } from './help.js?v=3.3.0';
+import { createHelpTooltip } from './tooltip.js?v=3.3.0';
 
 const $ = (id) => document.getElementById(id);
 const pedal = getPedal(new URLSearchParams(location.search).get('pedal'));

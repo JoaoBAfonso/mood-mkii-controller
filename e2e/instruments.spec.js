@@ -10,7 +10,7 @@ const open = async (page, instrument) => {
 };
 test('root hub separates ten pedals and four synths and all routes send nothing on entry', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('navigation', { name: 'Choose a category' }).getByRole('link')).toHaveCount(2);
+  await expect(page.getByRole('navigation', { name: 'Choose a category' }).getByRole('link')).toHaveCount(3);
   await expect(page.locator('#pedal-library')).toBeHidden();
   await page.getByRole('link', { name: /Open pedals/ }).click();
   await expect(page.locator('.pedal-choice')).toHaveCount(10);

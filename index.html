@@ -4,21 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#20282a">
-  <meta name="description" content="A MIDI performance space for pedals, synthesizers and drum machines.">
-  <title>Pedals and synthesizers · MIDI Studio</title>
+  <meta name="description" content="A MIDI performance space for pedals and synthesizers, with a personal local-first sound journal.">
+  <title>MIDI Studio · Instruments and Sound Journal</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/fonts/outfit-variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=3.2.1">
-  <link rel="stylesheet" href="instruments.css?v=3.2.1">
-  <script type="module" src="studio.js?v=3.2.1"></script>
+  <link rel="stylesheet" href="styles.css?v=3.3.0">
+  <link rel="stylesheet" href="instruments.css?v=3.3.0">
+  <script type="module" src="studio.js?v=3.3.0"></script>
 </head>
 <body class="selection-page">
   <header class="topbar"><a class="brand" href="./"><span class="brand-icon studio-icon">≋</span> MIDI STUDIO</a><a class="manual-link" href="https://github.com/JoaoBAfonso/mood-mkii-controller" target="_blank" rel="noreferrer">Code on GitHub ↗</a></header>
   <main>
-    <section class="selection-intro"><p class="eyebrow">YOUR PERFORMANCE SPACE</p><h1 id="hub-title">Find your sound.<br><em>Shape the next moment.</em></h1><p id="hub-description">Pedals, keys and rhythms. Choose your next direction.</p><a href="./" id="category-return" class="category-return" hidden>← Pedals / Synthesizers</a><span class="hub-art" aria-hidden="true"></span></section>
+    <section class="selection-intro"><p class="eyebrow">YOUR PERFORMANCE SPACE</p><h1 id="hub-title">Find your sound.<br><em>Shape the next moment.</em></h1><p id="hub-description">Pedals, keys, rhythms and a place to keep your sounds.</p><a href="./" id="category-return" class="category-return" hidden>← All categories</a><span class="hub-art" aria-hidden="true"></span></section>
     <nav class="category-library" id="category-library" aria-label="Choose a category">
       <a class="category-choice" href="?section=pedals"><div class="category-art" aria-hidden="true"><i></i><i></i><i></i></div><h2>Pedals</h2><p>Texture, modulation, dynamics and space. Your pedalboard, control by control.</p><span>Open pedals ↗</span></a>
       <a class="category-choice" href="?section=synths"><div class="category-art keys" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><h2>Synthesizers</h2><p>Synthesis and rhythm. Shape a sound, play notes and prepare the next program.</p><span>Open synthesizers ↗</span></a>
+      <a class="category-choice journal-choice" href="journal.html"><div class="category-art" aria-hidden="true"><i></i><i></i><i></i></div><h2>Sound Journal</h2><p>A personal collection of compositions, sketches and recordings. Listen, capture and keep developing.</p><span>Open sound journal ↗</span></a>
     </nav>
     <nav class="pedal-library" id="pedal-library" aria-label="Select instrument" hidden></nav>
     <noscript>Enable JavaScript to use the controllers and instrument selector.</noscript>

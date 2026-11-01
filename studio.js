@@ -1,10 +1,10 @@
-import { pedals } from './pedals.js?v=3.2.1';
-import { instruments } from './instruments.js?v=3.2.1';
-import { instrumentPanels } from './instrument-panels.js?v=3.2.1';
+import { pedals } from './pedals.js?v=3.3.0';
+import { instruments } from './instruments.js?v=3.3.0';
+import { instrumentPanels } from './instrument-panels.js?v=3.3.0';
 
 const section = new URLSearchParams(location.search).get('section');
 if (section && !['pedals', 'synths'].includes(section)) {
-  document.getElementById('hub-description').textContent = 'Unknown section. Choose Pedals or Synthesizers.';
+  document.getElementById('hub-description').textContent = 'Unknown section. Choose a category below.';
 }
 if (['pedals', 'synths'].includes(section)) {
   document.getElementById('category-library').hidden = true;
