@@ -17,6 +17,7 @@ async function ready(page) {
 test('decoded pre-play bars reflect audio amplitude, silence and both halves of a file', async ({ page }) => {
   await ready(page);
   await page.locator('#audio-files').setInputFiles([sound('Loud.wav'), sound('Silence.wav', true)]);
+  await page.locator('.sound-entry').first().scrollIntoViewIfNeeded();
   await expect(page.locator('.waveform-preview[data-ready=true]')).toHaveCount(2);
   expect(await page.locator('#player-audio').getAttribute('src')).toBeNull();
   const pixels = async (title, x) => page.locator('.sound-entry').filter({ has: page.getByRole('heading', { name: title, exact: true }) })
@@ -139,6 +140,7 @@ test('expanded playlist adds imported files without restarting the active track 
 });
 test('waveform decode failures are explicit; expanded and minimized controls fit small screens', async ({ page }) => {
   await ready(page); await page.locator('#audio-files').setInputFiles({ name: 'Broken.wav', mimeType: 'audio/wav', buffer: Buffer.from('not wav') });
+  await page.locator('.sound-entry').scrollIntoViewIfNeeded();
   await expect(page.locator('.waveform-status')).toContainText('Waveform unavailable');
   await page.getByRole('button', { name: 'Play Broken', exact: true }).click();
   await expect(page.locator('#player-error')).toBeVisible();

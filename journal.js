@@ -1,10 +1,16 @@
-import { journalSections, audioExtensions, validateEntry, openJournal, filterEntries, encodeBackup, decodeBackup } from './journal-store.js?v=3.4.0';
-import { createJournalPlayer } from './journal-player.js?v=3.4.0';
-import { drawWaveform, timeLabel } from './journal-audio.js?v=3.4.0';
+import { journalSections, audioExtensions, validateEntry, openJournal, filterEntries, encodeBackup, decodeBackup } from './journal-store.js?v=3.5.0';
+import { createJournalPlayer } from './journal-player.js?v=3.5.0';
+import { drawWaveform, timeLabel } from './journal-audio.js?v=3.5.0';
+import { createDriveSession, validateDriveSettings } from './journal-drive.js?v=3.5.0';
 
 const $ = (id) => document.getElementById(id);
 let store;
 let entries = [];
+let driveEntries = [];
+let driveConnected = false;
+let driveBusy = false;
+let googleReady = false;
+let driveGeneration = 0;
 let section = '';
 let visibleCount = 20;
 let editing;
@@ -24,7 +30,9 @@ const notify = (message = '') => {
   if ($('sound-player').open) { $('player-error').textContent = message; $('player-error').hidden = !message; }
 };
 const sizeLabel = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-const player = createJournalPlayer({ notify, canPlay: () => !recordingPending });
+const libraryEntries = () => [...entries, ...driveEntries];
+const drive = createDriveSession({ changed: driveChanged });
+const player = createJournalPlayer({ notify, canPlay: () => !recordingPending, resolveAudio: (entry) => drive.audio(entry, { priority: true }) });
 const selected = new Set();
 let currentView = [];
 const waveforms = new Map();
@@ -32,10 +40,11 @@ const observer = new IntersectionObserver((items) => {
   for (const item of items) {
     if (!item.isIntersecting) continue;
     observer.unobserve(item.target);
-    const entry = entries.find((entry) => entry.id === item.target.dataset.entry);
+    const entry = libraryEntries().find((entry) => entry.id === item.target.dataset.entry);
     if (!entry) continue;
     const card = item.target;
-    player.preview(entry.audio).then((data) => {
+    const preview = entry.source === 'drive' ? drive.audio(entry).then((audio) => player.preview(audio)) : player.preview(entry.audio);
+    preview.then((data) => {
       if (!card.isConnected) return;
       const canvas = card.querySelector('.waveform-preview');
       waveforms.set(canvas, data.peaks); drawWaveform(canvas, data.peaks);
@@ -58,11 +67,84 @@ function controls() {
   $('stop-recording').disabled = !recorder || recorder.state === 'inactive';
   $('retry-recording').disabled = busy;
   $('recording-title').disabled = recordingPending;
-  for (const button of $('entries').querySelectorAll('.entry-actions button')) button.disabled = busy || recordingPending;
+  for (const button of $('entries').querySelectorAll('.entry-actions button')) button.disabled = busy || recordingPending || button.dataset.restricted === 'true';
   $('open-player-files').disabled = !store || busy || recordingPending;
   $('player-add-files').disabled = !store || busy || recordingPending;
   selectionControls();
+  driveControls();
 }
+function driveControls() {
+  $('drive-connect').disabled = driveBusy || recordingPending;
+  $('drive-connect').textContent = !googleReady ? 'Prepare Google sign-in' : driveConnected ? 'Switch Google account' : 'Connect Google Drive';
+  $('drive-refresh').disabled = !driveConnected || driveBusy || recordingPending;
+  $('drive-refresh').hidden = !driveConnected;
+  $('drive-disconnect').disabled = !driveConnected && !(driveBusy && googleReady);
+  $('drive-disconnect').hidden = $('drive-disconnect').disabled;
+  $('drive-client-id').disabled = driveConnected || driveBusy;
+  $('drive-folder-id').disabled = driveConnected || driveBusy;
+}
+function driveChanged({ connected, pending = false, message }) {
+  driveGeneration++;
+  driveConnected = connected;
+  driveBusy = pending;
+  $('drive-badge').textContent = connected ? 'CONNECTED · READ ONLY' : 'DISCONNECTED';
+  $('drive-status').textContent = message;
+  if (!connected) { driveEntries = []; render(); }
+  driveControls();
+  if (connected) refreshDrive();
+}
+async function refreshDrive() {
+  const generation = driveGeneration;
+  driveBusy = true; driveControls();
+  $('drive-status').textContent = 'Reading the selected folder and its subfolders…';
+  try {
+    const settings = validateDriveSettings($('drive-client-id').value, $('drive-folder-id').value);
+    const result = await drive.library(settings.folderId);
+    const previous = new Map(driveEntries.map((entry) => [entry.id, entry]));
+    driveEntries = result.entries.map((entry) => {
+      const old = previous.get(entry.id);
+      if (old?.version === entry.version) return Object.assign(old, entry);
+      return entry;
+    });
+    render();
+    $('drive-status').textContent = `${result.account?.emailAddress || result.account?.displayName || 'Google account'} · ${result.name} · ${driveEntries.length} sounds · Read only`;
+  } catch (error) {
+    if (generation === driveGeneration && error.name !== 'AbortError') { $('drive-status').textContent = `Could not read Drive: ${error.message}`; notify($('drive-status').textContent); }
+  } finally {
+    if (generation === driveGeneration) { driveBusy = false; driveControls(); }
+  }
+}
+$('drive-connect').onclick = async () => {
+  try {
+    const settings = validateDriveSettings($('drive-client-id').value, $('drive-folder-id').value);
+    localStorage.setItem('midi-studio-drive-settings', JSON.stringify(settings));
+    if (!googleReady) {
+      driveBusy = true; driveControls(); $('drive-status').textContent = 'Loading Google sign-in…';
+      await drive.prepare(); googleReady = true;
+      driveBusy = false;
+      $('drive-status').textContent = 'Ready. Press Connect Google Drive to choose your account and authorize read-only access.';
+    } else {
+      drive.connect(settings.clientId);
+    }
+  } catch (error) {
+    $('drive-settings').open = true; $('drive-status').textContent = error.message; notify(error.message);
+    driveBusy = false;
+  } finally {
+    driveControls();
+  }
+};
+$('drive-refresh').onclick = refreshDrive;
+$('drive-disconnect').onclick = async () => {
+  try { await drive.disconnect(); } catch (error) { $('drive-status').textContent = error.message; notify(error.message); }
+};
+window.addEventListener('pagehide', () => drive.clear('Drive session ended.'));
+try {
+  const saved = JSON.parse(localStorage.getItem('midi-studio-drive-settings') || 'null');
+  if (saved) {
+    const settings = validateDriveSettings(saved.clientId, saved.folderId);
+    $('drive-client-id').value = settings.clientId; $('drive-folder-id').value = settings.folderId;
+  }
+} catch (error) { notify(`Could not restore Drive connection settings: ${error.message}. Enter them again.`); }
 async function operate(task) {
   if (busy) { notify('Please wait for the current library operation to finish.'); return; }
   busy = true; controls(); notify();
@@ -83,23 +165,26 @@ function releasePlayers() {
 }
 function render() {
   releasePlayers();
-  player.reconcile(entries);
-  for (const id of selected) if (!entries.some((entry) => entry.id === id)) selected.delete(id);
-  $('entry-count').textContent = String(entries.length);
+  const library = libraryEntries();
+  player.reconcile(library);
+  for (const id of selected) if (!library.some((entry) => entry.id === id)) selected.delete(id);
+  $('entry-count').textContent = String(library.length);
   $('section-filters').replaceChildren();
   for (const name of ['', ...journalSections]) {
     const button = element('button', `${name || 'All sounds'} `); button.type = 'button';
-    button.append(element('small', String(entries.filter((entry) => !name || entry.section === name).length)));
+    button.append(element('small', String(library.filter((entry) => !name || entry.section === name).length)));
     button.setAttribute('aria-pressed', String(section === name));
     button.onclick = () => { section = name; visibleCount = 20; render(); };
     $('section-filters').append(button);
   }
   const tag = $('tag-filter').value;
   $('tag-filter').replaceChildren(new Option('All tags', ''));
-  const tags = [...new Set(entries.flatMap((entry) => entry.tags))].sort((a, b) => a.localeCompare(b, 'en'));
+  const tags = [...new Set(library.flatMap((entry) => entry.tags))].sort((a, b) => a.localeCompare(b, 'en'));
   for (const name of tags) $('tag-filter').add(new Option(name, name));
   $('tag-filter').value = tags.includes(tag) ? tag : '';
-  const filtered = filterEntries(entries, { section, query: $('search').value, tag: $('tag-filter').value, sort: $('sort').value });
+  const source = $('source-filter').value;
+  const filtered = filterEntries(library.filter((entry) => !source || (entry.source || 'local') === source),
+    { section, query: $('search').value, tag: $('tag-filter').value, sort: $('sort').value });
   currentView = filtered;
   selectionControls();
   $('results-count').textContent = `${filtered.length} ${filtered.length === 1 ? 'sound' : 'sounds'}${section ? ` in ${section}` : ''}`;
@@ -113,10 +198,11 @@ function render() {
     checkbox.setAttribute('aria-label', `Select ${entry.title}`);
     checkbox.onchange = () => { if (checkbox.checked) selected.add(entry.id); else selected.delete(entry.id); selectionControls(); };
     selection.append(checkbox, element('span', 'Select')); top.append(selection);
-    const url = URL.createObjectURL(entry.audio); urls.set(entry.id, url);
+    const url = entry.audio ? URL.createObjectURL(entry.audio) : undefined;
+    if (url) urls.set(entry.id, url);
     const waveform = document.createElement('canvas'); waveform.className = 'waveform-preview';
     waveform.setAttribute('role', 'img'); waveform.setAttribute('aria-label', `Full audio waveform: ${entry.title}`);
-    const status = element('p', 'Analysing audio for waveform…', 'waveform-status');
+    const status = element('p', entry.source === 'drive' ? 'Loading private audio for waveform…' : 'Analysing audio for waveform…', 'waveform-status');
     const playback = element('div', undefined, 'entry-playback');
     const play = element('button', 'Play & visualize', 'entry-play primary');
     play.setAttribute('aria-label', `Play ${entry.title}`); play.onclick = () => {
@@ -126,13 +212,29 @@ function render() {
     const add = element('button', '+ Queue'); add.setAttribute('aria-label', `Add ${entry.title} to queue`);
     add.onclick = () => { if (recordingPending) notify('Stop the recording before adding sounds.'); else player.add([entry]); };
     playback.append(play, add);
-    card.append(top, element('h3', entry.title), element('p', `${entry.fileName} · ${sizeLabel(entry.audio.size)}`, 'entry-file'), waveform, status, playback);
+    card.append(top, element('h3', entry.title), element('p', `${entry.fileName} · ${sizeLabel(entry.audio?.size ?? entry.size)}`, 'entry-file'), waveform, status, playback);
+    if (entry.source === 'drive') card.append(element('p', `Google Drive${entry.path ? ` · ${entry.path}` : ''}`, 'entry-source'));
     if (entry.notes) card.append(element('p', entry.notes, 'entry-notes'));
     const tagList = element('div', undefined, 'tags');
     for (const tag of entry.tags) tagList.append(element('span', tag));
     card.append(tagList);
     const actions = element('div', undefined, 'entry-actions');
-    const download = element('a', 'Download'); download.href = url; download.download = entry.fileName;
+    const download = entry.source === 'drive' ? element('button', 'Download original') : element('a', 'Download');
+    if (entry.source === 'drive') {
+      download.disabled = !entry.canDownload;
+      download.dataset.restricted = String(!entry.canDownload);
+      download.onclick = async () => {
+        download.disabled = true;
+        try {
+          const audio = await drive.audio(entry, { priority: true });
+          if (!card.isConnected) return;
+          const fileUrl = URL.createObjectURL(audio);
+          const link = element('a'); link.href = fileUrl; link.download = entry.fileName; link.click();
+          setTimeout(() => URL.revokeObjectURL(fileUrl), 1000);
+        } catch (error) { if (error.name !== 'AbortError') notify(`Could not download audio: ${error.message}`); }
+        finally { download.disabled = !entry.canDownload; }
+      };
+    } else { download.href = url; download.download = entry.fileName; }
     const edit = element('button', 'Edit'); edit.onclick = () => {
       if (busy) { notify('Please wait for the current library operation to finish.'); return; }
       editing = entry.id; $('edit-title').value = entry.title; $('edit-section').value = entry.section;
@@ -142,12 +244,14 @@ function render() {
       if (!window.confirm(`Delete "${entry.title}" and its local audio? Export a backup first if you want to keep it.`)) return;
       operate(async () => { await store.remove(entry.id); entries = entries.filter((item) => item.id !== entry.id); render(); });
     };
-    actions.append(download, edit, remove); card.append(actions); $('entries').append(card);
+    if (entry.source === 'drive') actions.append(download);
+    else actions.append(download, edit, remove);
+    card.append(actions); $('entries').append(card);
     observer.observe(card); waveResize.observe(waveform);
   }
   $('empty').hidden = filtered.length > 0;
-  $('empty').querySelector('h3').textContent = entries.length ? 'No sounds match this view.' : 'A quiet space, ready for a sound.';
-  $('empty').querySelector('p').textContent = entries.length ? 'Choose another section or clear your search and tag filter.' : 'Import your first composition or record a sketch above.';
+  $('empty').querySelector('h3').textContent = library.length ? 'No sounds match this view.' : 'A quiet space, ready for a sound.';
+  $('empty').querySelector('p').textContent = library.length ? 'Choose another section or clear your search, source and tag filters.' : 'Import audio, record a sketch or connect your private Drive folder.';
   $('show-more').hidden = filtered.length <= visibleCount;
   $('storage-status').textContent = `Local library · ${sizeLabel(entries.reduce((size, entry) => size + entry.audio.size, 0))}`;
 }
@@ -170,6 +274,7 @@ function importFiles(input, playerMode) {
     for (const file of files) if (!file.size || !(file.type.startsWith('audio/') || audioExtensions.test(file.name))) throw new Error(`"${file.name}" is not a supported audio file`);
     const imported = files.map((file) => makeEntry(file, file.name, file.name.replace(/\.[^.]+$/, ''), section || 'Sketches'));
     await saveEntries(imported);
+    if ($('source-filter').value === 'drive') $('source-filter').value = 'local';
     $('search').value = ''; $('tag-filter').value = ''; render();
     notify(`Imported ${files.length} ${files.length === 1 ? 'sound' : 'sounds'}.`);
     if (playerMode === 'open') player.open(imported);
@@ -182,9 +287,9 @@ $('player-add-files').onclick = () => { playerImportMode = 'queue'; $('player-fi
 $('player-browse').onclick = () => { $('player-size').click(); $('section-filters').scrollIntoView({ block: 'start' }); };
 $('player-files').onchange = () => importFiles($('player-files'), playerImportMode);
 $('play-view').onclick = () => player.open(currentView);
-$('play-selection').onclick = () => player.open(entries.filter((entry) => selected.has(entry.id)));
-$('queue-selection').onclick = () => player.add(entries.filter((entry) => selected.has(entry.id)));
-for (const id of ['search', 'tag-filter', 'sort']) $(id).addEventListener(id === 'search' ? 'input' : 'change', () => { visibleCount = 20; render(); });
+$('play-selection').onclick = () => player.open(libraryEntries().filter((entry) => selected.has(entry.id)));
+$('queue-selection').onclick = () => player.add(libraryEntries().filter((entry) => selected.has(entry.id)));
+for (const id of ['search', 'tag-filter', 'sort', 'source-filter']) $(id).addEventListener(id === 'search' ? 'input' : 'change', () => { visibleCount = 20; render(); });
 $('show-more').onclick = () => { visibleCount += 20; render(); };
 for (const name of journalSections) $('edit-section').add(new Option(name, name));
 $('cancel-edit').onclick = () => $('edit-dialog').close();
@@ -207,7 +312,7 @@ function downloadBlob(blob, name) {
 $('export-backup').onclick = () => operate(async () => {
   const text = await encodeBackup(entries);
   downloadBlob(new Blob([text], { type: 'application/json' }), `sound-journal-${new Date().toISOString().slice(0, 10)}.json`);
-  notify('Backup download started. It includes the full audio library; check that the file finishes downloading.');
+  notify('Backup download started. It includes the full local audio library; check that the file finishes downloading.');
 });
 $('restore-backup').onclick = () => $('backup-file').click();
 $('backup-file').onchange = () => {
@@ -217,7 +322,9 @@ $('backup-file').onchange = () => {
     const restored = decodeBackup(await file.text());
     const duplicates = restored.filter((item) => entries.some((entry) => entry.id === item.id)).length;
     if (!window.confirm(`Restore ${restored.length} sounds? ${duplicates} matching entries will be replaced. Other sounds will be kept.`)) return;
-    await saveEntries(restored); notify(`Restored ${restored.length} sounds.`);
+    await saveEntries(restored);
+    if ($('source-filter').value === 'drive') { $('source-filter').value = 'local'; render(); }
+    notify(`Restored ${restored.length} sounds.`);
   });
 };
 $('persistent-storage').onclick = () => operate(async () => {
@@ -238,6 +345,7 @@ async function saveTake() {
   if (!pendingTake) return;
   const take = pendingTake;
   await saveEntries([take]); clearRecovery(); section = 'Recordings';
+  $('source-filter').value = 'local';
   $('search').value = ''; $('tag-filter').value = ''; render();
   $('recording-status').textContent = 'Saved to Recordings. Ready for the next take.'; notify('Recording saved locally.');
 }

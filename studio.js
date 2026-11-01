@@ -1,6 +1,6 @@
-import { pedals } from './pedals.js?v=3.4.0';
-import { instruments } from './instruments.js?v=3.4.0';
-import { instrumentPanels } from './instrument-panels.js?v=3.4.0';
+import { pedals } from './pedals.js?v=3.5.0';
+import { instruments } from './instruments.js?v=3.5.0';
+import { instrumentPanels } from './instrument-panels.js?v=3.5.0';
 
 const section = new URLSearchParams(location.search).get('section');
 if (section && !['pedals', 'synths'].includes(section)) {

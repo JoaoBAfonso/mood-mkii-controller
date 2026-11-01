@@ -1,6 +1,6 @@
-import { createAudioAnalysis, createVisualizer, drawWaveform, timeLabel, visualProfiles } from './journal-audio.js?v=3.4.0';
+import { createAudioAnalysis, createVisualizer, drawWaveform, timeLabel, visualProfiles } from './journal-audio.js?v=3.5.0';
 
-export function createJournalPlayer({ notify, canPlay = () => true }) {
+export function createJournalPlayer({ notify, canPlay = () => true, resolveAudio = (entry) => entry.audio }) {
   const $ = (id) => document.getElementById(id);
   const root = $('sound-player');
   const audio = $('player-audio');
@@ -14,6 +14,7 @@ export function createJournalPlayer({ notify, canPlay = () => true }) {
   let mediaSource;
   let stopVisual = () => {};
   let generation = 0;
+  let loading = false;
   let returnFocus;
   const currentEntry = () => queue[current];
   function error(message) {
@@ -28,7 +29,8 @@ export function createJournalPlayer({ notify, canPlay = () => true }) {
     $('player-progress').setAttribute('aria-valuetext', `${timeLabel(audio.currentTime)} of ${timeLabel(duration)}`);
     $('player-time').textContent = `${timeLabel(audio.currentTime)} / ${timeLabel(duration)}`;
     if (peaks && !root.classList.contains('minimized')) drawWaveform($('player-waveform'), peaks, duration ? audio.currentTime / duration : 0);
-    $('player-toggle').textContent = audio.paused ? 'Play' : 'Pause';
+    $('player-toggle').textContent = loading ? 'Loading…' : audio.paused ? 'Play' : 'Pause';
+    $('player-toggle').disabled = loading;
   }
   function renderQueue() {
     $('player-queue').replaceChildren();
@@ -91,18 +93,19 @@ export function createJournalPlayer({ notify, canPlay = () => true }) {
       if (token === generation && failure.name !== 'AbortError') error(`Could not play this track: ${failure.message}. Try Play again or download the original.`);
     }
   }
-  function load(index, expanded, autoplay = true) {
+  async function load(index, expanded, autoplay = true) {
     if (!queue[index]) return;
     const wasOpen = root.open;
     audio.pause(); stopVisual(); generation++;
     const token = generation;
-    current = index; peaks = undefined;
+    current = index; peaks = undefined; loading = true;
     if (sourceUrl) URL.revokeObjectURL(sourceUrl);
-    sourceBlob = currentEntry().audio; sourceUrl = URL.createObjectURL(sourceBlob);
-    audio.src = sourceUrl;
+    sourceUrl = undefined; sourceBlob = undefined;
+    audio.removeAttribute('src'); audio.load();
+    $('player-download').removeAttribute('href');
+    $('player-download').hidden = true;
     $('player-title').textContent = currentEntry().title;
     $('player-section').textContent = currentEntry().section;
-    $('player-download').href = sourceUrl; $('player-download').download = currentEntry().fileName;
     $('player-waveform').getContext('2d').clearRect(0, 0, $('player-waveform').width, $('player-waveform').height);
     error(''); renderQueue();
     if (!wasOpen || expanded !== undefined) show(expanded ?? true);
@@ -115,6 +118,23 @@ export function createJournalPlayer({ notify, canPlay = () => true }) {
         analyser = nextAnalyser;
       }
     } catch (failure) { error(`Live visualizers unavailable: ${failure.message}`); }
+    // Resume in the user gesture, before an online track's download can consume it.
+    if (autoplay && analyser) analysis.context().resume().catch((failure) => {
+      if (token === generation) error(`Could not activate audio: ${failure.message}. Try Play again.`);
+    });
+    try {
+      const entry = currentEntry();
+      const blob = entry.audio instanceof Blob ? entry.audio : await resolveAudio(entry);
+      if (token !== generation) return;
+      if (!(blob instanceof Blob) || !blob.size) throw new Error('This track has no playable audio.');
+      sourceBlob = blob; sourceUrl = URL.createObjectURL(blob); audio.src = sourceUrl;
+      $('player-download').href = sourceUrl; $('player-download').download = entry.fileName;
+      $('player-download').hidden = false;
+    } catch (failure) {
+      if (token === generation) { loading = false; updateProgress(); error(`Could not load this track: ${failure.message}`); }
+      return;
+    }
+    loading = false;
     analysis.peaks(sourceBlob).then((data) => {
       if (token !== generation) return;
       peaks = data.peaks; updateProgress();
@@ -124,7 +144,7 @@ export function createJournalPlayer({ notify, canPlay = () => true }) {
   function close() {
     generation++; audio.pause(); audio.removeAttribute('src'); audio.load(); stopVisual();
     if (sourceUrl) URL.revokeObjectURL(sourceUrl);
-    sourceUrl = undefined; sourceBlob = undefined; queue = []; current = -1; peaks = undefined;
+    sourceUrl = undefined; sourceBlob = undefined; queue = []; current = -1; peaks = undefined; loading = false;
     root.close(); document.body.classList.remove('has-player', 'player-expanded'); returnFocus?.focus();
   }
   for (const family of ['2D', '3D', 'Creative']) {
@@ -135,7 +155,7 @@ export function createJournalPlayer({ notify, canPlay = () => true }) {
   $('visual-profile').onchange = restartVisual;
   $('player-size').onclick = () => show(root.classList.contains('minimized'));
   $('player-close').onclick = close;
-  $('player-toggle').onclick = () => { if (audio.paused) play(); else audio.pause(); };
+  $('player-toggle').onclick = () => { if (!sourceUrl && currentEntry()) load(current); else if (audio.paused) play(); else audio.pause(); };
   $('player-previous').onclick = () => load(current - 1);
   $('player-next').onclick = () => load(current + 1);
   $('player-progress').oninput = () => { if (Number.isFinite(audio.duration)) audio.currentTime = Number($('player-progress').value); updateProgress(); };
@@ -181,7 +201,7 @@ export function createJournalPlayer({ notify, canPlay = () => true }) {
       // Metadata edits must not interrupt the active Blob or its playback position.
       current = queue.slice(0, current).filter((entry) => latest.has(entry.id)).length;
       queue = queue.filter((entry) => latest.has(entry.id)).map((entry) => latest.get(entry.id));
-      if (currentEntry().audio !== sourceBlob) load(current);
+      if (!loading && currentEntry().audio !== sourceBlob) load(current);
       else { $('player-title').textContent = currentEntry().title; $('player-section').textContent = currentEntry().section; renderQueue(); }
     },
   };

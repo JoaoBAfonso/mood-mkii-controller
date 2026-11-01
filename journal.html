@@ -7,14 +7,20 @@
   <meta name="description" content="A local-first personal sound journal. Collect compositions, sketches and recordings.">
   <title>Sound Journal · MIDI Studio</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="journal.css?v=3.4.0">
-  <script type="module" src="journal.js?v=3.4.0"></script>
+  <link rel="stylesheet" href="journal.css?v=3.5.0">
+  <script type="module" src="journal.js?v=3.5.0"></script>
 </head>
 <body>
   <header class="topbar"><a href="./">← MIDI STUDIO</a><span class="local-badge">ON THIS DEVICE</span></header>
   <main>
     <section class="intro"><p class="eyebrow">YOUR PERSONAL SOUND JOURNAL</p><h1>Keep the sound.<br><em>Follow the idea.</em></h1><p>A home for finished compositions, evolving pieces and the moments worth keeping.</p></section>
     <div id="notification" role="alert" hidden></div>
+    <section class="surface drive-panel" aria-label="Private Google Drive library">
+      <div class="capture-heading"><div><p class="eyebrow">YOUR PRIVATE CLOUD LIBRARY</p><h2>Google Drive</h2></div><span id="drive-badge" class="local-badge">DISCONNECTED</span></div>
+      <p id="drive-status" role="status">Connect your account to read audio from a dedicated folder. Files stay private; no audio is uploaded.</p>
+      <details id="drive-settings"><summary>Connection settings &amp; setup</summary><p>Create your own Google OAuth app, keep it in Testing and add only your account as a test user. <a href="https://github.com/JoaoBAfonso/mood-mkii-controller#private-google-drive-setup" target="_blank" rel="noopener noreferrer">Step-by-step setup ↗</a></p><div class="drive-settings-fields"><label>Web OAuth Client ID<input id="drive-client-id" autocomplete="off" spellcheck="false" placeholder="…apps.googleusercontent.com"></label><label>Audio folder link or ID<input id="drive-folder-id" autocomplete="off" spellcheck="false" placeholder="https://drive.google.com/drive/folders/…"></label></div><p class="drive-note">The read-only permission covers your Drive. This interface reads only the chosen folder and its subfolders. The interface is public; Google authorization protects access to your files.</p><p class="drive-note">Tokens and loaded cloud audio stay in memory for this session. Waveform previews download the full file as cards approach the screen. Use subfolders named Released, Work in Progress, Sketches and Recordings to organize the library.</p></details>
+      <div class="drive-actions"><button id="drive-connect">Prepare Google sign-in</button><button id="drive-refresh" disabled>Refresh folder</button><button id="drive-disconnect" disabled>Disconnect &amp; revoke</button></div>
+    </section>
     <section class="capture surface" aria-label="Capture and import">
       <div class="capture-heading"><div><p class="eyebrow">CAPTURE SOMETHING NEW</p><h2>From a file. Or from right now.</h2></div><button id="import-audio" class="primary" disabled>+ Import audio</button></div>
       <input id="audio-files" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.ogg,.oga,.opus,.flac,.aiff,.aif,.webm" multiple hidden>
@@ -28,7 +34,7 @@
     <section class="collection" aria-label="Sound collection">
       <div class="collection-heading"><div><p class="eyebrow">THE COLLECTION</p><h2>Your sounds <span id="entry-count">0</span></h2></div><span id="storage-status" role="status">Opening local library…</span></div>
       <nav id="section-filters" aria-label="Journal sections"></nav>
-      <div class="filters"><label>Search<input id="search" type="search" placeholder="Title, notes or tags"></label><label>Tag<select id="tag-filter"><option value="">All tags</option></select></label><label>Sort<select id="sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title A–Z</option></select></label></div>
+      <div class="filters"><label>Search<input id="search" type="search" placeholder="Title, notes or tags"></label><label>Tag<select id="tag-filter"><option value="">All tags</option></select></label><label>Sort<select id="sort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="title">Title A–Z</option></select></label><label>Source<select id="source-filter"><option value="">All sources</option><option value="local">On this device</option><option value="drive">Google Drive</option></select></label></div>
       <p id="results-count" role="status"></p>
       <div class="playlist-actions" aria-label="Playlist tools"><button id="play-view" disabled>Play this view</button><button id="play-selection" disabled>Play selected</button><button id="queue-selection" disabled>Add selected to queue</button><button id="open-player-files" disabled>Open audio files together</button><span id="selection-count" role="status">0 selected</span></div>
       <input id="player-files" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.ogg,.oga,.opus,.flac,.aiff,.aif,.webm" multiple hidden>
@@ -36,7 +42,7 @@
       <div id="empty" class="empty surface"><span aria-hidden="true">≋</span><h3>A quiet space, ready for a sound.</h3><p>Import your first composition or record a sketch above.</p></div>
       <button id="show-more" hidden>Show more sounds</button>
     </section>
-    <details class="surface backup"><summary>Local storage &amp; backup</summary><p>This first draft stores audio and notes in this browser, on this device. Nothing is uploaded. It is not an account-protected vault: anyone using this browser profile can open it. Clearing browser data can erase the library.</p><p>Export a backup regularly. It includes all audio and metadata; keep it somewhere safe. Large libraries need memory and disk space to export. Google Drive sync and dedicated MIDI modules will be added separately.</p><div class="backup-actions"><button id="export-backup" disabled>Export full backup</button><button id="restore-backup" disabled>Restore backup</button><button id="persistent-storage" disabled>Request durable storage</button></div><input id="backup-file" type="file" accept=".json,application/json" hidden></details>
+    <details class="surface backup"><summary>Local storage &amp; backup</summary><p>Imported audio and recordings are stored in this browser, on this device. Nothing is uploaded. This local library is not an account-protected vault: anyone using this browser profile can open it. Clearing browser data can erase it.</p><p>Export a backup regularly. It includes local audio and metadata only; Google Drive entries are not copied into backups. Large libraries need memory and disk space to export. Dedicated MIDI modules will be added separately.</p><div class="backup-actions"><button id="export-backup" disabled>Export full backup</button><button id="restore-backup" disabled>Restore backup</button><button id="persistent-storage" disabled>Request durable storage</button></div><input id="backup-file" type="file" accept=".json,application/json" hidden></details>
     <noscript>Enable JavaScript to use the local sound journal.</noscript>
   </main>
   <footer>LOCAL-FIRST · NO UPLOADS · YOUR SOUND, YOUR DEVICE</footer>
