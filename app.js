@@ -1,8 +1,8 @@
-import { getPedal } from './pedals.js?v=2.1.0';
-import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=2.1.0';
-import { createPresetManager } from './presets.js?v=2.1.0';
-import { controlHelp, controlName, controlChoices, modeDetail } from './help.js?v=2.1.0';
-import { createHelpTooltip } from './tooltip.js?v=2.1.0';
+import { getPedal } from './pedals.js?v=3.0.0';
+import { ccMessage, pcMessage, noteMessage, sendMessage } from './midi.js?v=3.0.0';
+import { createPresetManager } from './presets.js?v=3.0.0';
+import { controlHelp, controlName, controlChoices, modeDetail } from './help.js?v=3.0.0';
+import { createHelpTooltip } from './tooltip.js?v=3.0.0';
 
 const $ = (id) => document.getElementById(id);
 const pedal = getPedal(new URLSearchParams(location.search).get('pedal'));
@@ -10,7 +10,7 @@ if (!pedal) {
   document.querySelector('main').replaceChildren();
   const error = document.createElement('p');
   error.textContent = 'Pedal desconhecido. Volta à seleção para escolher um modelo. Nenhum comando foi enviado.';
-  const back = document.createElement('a'); back.href = './'; back.textContent = '← Selecionar pedal';
+  const back = document.createElement('a'); back.href = './?section=pedals'; back.textContent = '← Selecionar pedal';
   document.querySelector('main').append(error, back);
   throw new Error('Modelo de pedal inválido.');
 }

@@ -1,19 +1,35 @@
 # Chase Bliss · MIDI Studio
 
-Independent, Portuguese-language Web MIDI controllers for **MOOD MKII**, **Lost + Found (green)**, **Generation Loss MKII** and **BAD MOOD (Ink)**. Select a pedal on the landing page, open its dedicated controller, and use **Pedais** to return.
+Independent, Portuguese-language Web MIDI controllers for pedals, synthesizers and drum machines. The initial hub separates **Pedais** and **Sintetizadores**; each equipment page has its own visual identity, official manual links and documented MIDI controls.
 
 **Website:** https://JoaoBAfonso.github.io/mood-mkii-controller/
 
 ## Features
 
-- Four dedicated, bookmarkable controller pages with model-specific CC maps, normal/Hidden/ALT banks, mode diagrams and original pedal illustrations.
+- Ten pedal controllers and four synthesizer/drum-machine controllers, with bookmarkable routes and original hardware-inspired illustrations.
 - MOOD MKII: 61 CCs; Lost + Found: 51; Generation Loss MKII: 41; BAD MOOD: 62. Commands are based on each model's manual, not inherited indiscriminately.
 - Green Lost + Found theme, blue VHS Generation Loss theme and monochrome patterned BAD MOOD Ink theme alongside the existing lavender MOOD.
 - Neutral studio hub with pedal colors confined to the instrument previews and controller pages.
 - Full manual and MIDI manual links in every controller header.
 - Performance-first controls: MIDI numbers and precise numeric editors are optional via **Valores MIDI**; the monitor is collapsed by default.
 - Hover/focus/touch help and original Portuguese mode summaries grounded in the complete manuals.
-- Per-pedal local preset library with names, notes, favorites, search, pagination, JSON import/export and a reorderable performance setlist.
+- Per-instrument local preset libraries with names, notes, favorites, search, pagination, JSON import/export and reorderable performance setlists.
+
+### Equipment hub
+
+**Pedais** contains the original four Chase Bliss models plus **BOSS SL-2 Slicer**, **Strymon Deco v2**, **Strymon Mobius**, **Source Audio EQ2**, **Source Audio Nemesis ADT** and **Empress Reverb**.
+
+**Sintetizadores** contains **Behringer DeepMind 12**, **Arturia MicroFreak**, **Roland TR-8S** and **Behringer PRO-VS Mini**. Keyboard/pad views send documented Note On/Off messages; only instruments supporting standard pitch bend or real-time transport expose those controls.
+
+The new multi-manufacturer controllers use each device's documented CC/NRPN encoding, parameter ranges and selectable values. NRPN data entry distinguishes seven-bit and fourteen-bit values. Preset libraries follow the hardware's actual recallable slot count and bank selection rather than inheriting Chase Bliss's 122 slots, Live program or save CC. Where no documented remote preset recall exists, no hardware preset controls are invented. Consult **Ligação e funcionamento** for MIDI receive settings and any assignable/default mapping requirements.
+
+Control search covers parameter names and contextual help. The visual hardware panel and section editors share independent last-sent values per output/channel and demo context. Failed sends retain the previous values; loading a program marks parameter values as unknown until individually changed. Bank Select and Program Change are sent as one ordered MIDI batch, with active notes released first.
+
+TC Electronic Brainwaves and Universal Audio UAFX MAX are excluded from this release by request: their USB editing/update connections are not treated as undocumented MIDI controllers.
+
+The manufacturer's current Nemesis ADT manual and linked legacy Nemesis MIDI table disagree about several effect-engine indices. The controller exposes verified matching engine assignments but deliberately excludes those conflicting indices and the two new indices absent from the MIDI table. Existing hardware presets can still recall the pedal's complete stored sounds.
+
+DeepMind 12 and MicroFreak expose the 128 documented Program Change addresses in the currently selected hardware bank. Their total onboard memory is larger, but the controller does not infer Bank Select byte encodings that are missing or ambiguous in the retained references. Select the intended bank on the hardware before using its library. PRO-VS MINI preset reception remains unverified; its sound controls and keyboard are available without an invented Program Change mapping.
 
 ### MOOD MKII
 
@@ -84,7 +100,7 @@ Preset slots 1/2 match the right/left physical toggle. Saving overwrites hardwar
 
 ### Preset library and performance setlist
 
-**Presets** opens all 122 hardware slots, with search (slot/name/notes), favorites and twelve tiles per page. Choosing a tile prepares that slot for editing; **Carregar preset** sends one Program Change. **Live** sends PC0. **Guardar no pedal** sends the documented CC111 with the chosen slot, after overwrite confirmation; it saves the pedal's current settings, not a snapshot of the interface.
+On Chase Bliss controllers, **Presets** opens all 122 hardware slots, with search (slot/name/notes), favorites and twelve tiles per page. Choosing a tile prepares that slot for editing; **Carregar preset** sends one Program Change. **Live** sends PC0. **Guardar no pedal** sends the documented CC111 with the chosen slot, after overwrite confirmation; it saves the pedal's current settings, not a snapshot of the interface.
 
 Names, performance notes and favorites are stored in `localStorage`, separately for each model. **Guardar nome e notas** updates only this organization and sends no MIDI. **Importar / Exportar** exchange versioned JSON for that same model; an import replaces local organization only after confirmation. Wrong-model, invalid or oversized files are rejected without changing the existing library. Storage failures are shown explicitly.
 
@@ -104,7 +120,7 @@ Mode descriptions and control help are original Portuguese summaries of the main
 
 ### Navigation and safety
 
-Routes use `controller.html?pedal=...`, so bookmarks and browser back/forward work on static GitHub Pages without server rewrites. Unknown model identifiers show an explicit error and no controller.
+Routes use `controller.html?pedal=...` for Chase Bliss and `instrument.html?instrument=...` for the new models; category pages use `?section=pedals` / `?section=synths`. Bookmarks and browser back/forward work on static GitHub Pages without server rewrites. Unknown model identifiers show an explicit error and no controller.
 
 No model is detected automatically. Opening a page or choosing another pedal requests no MIDI permission and sends no values. Each newly opened controller starts with its own UI values and requires output/channel selection; values are not migrated between pedal models. Back/forward may restore a previous page's last UI state through the browser's page cache; this is still not telemetry. Normal/Hidden view navigation never replays a bank. Leaving via **Pedais** releases active notes on their original destination and blocks the navigation if Note Off fails; browser unload also attempts release and requests confirmation on failure.
 
@@ -131,7 +147,7 @@ npm run test:browser
 
 The tests use a mocked MIDI output; they do not send anything to physical hardware. They cover exact CC lists for all models, select/DIP/action bytes, model points and chord boundaries, selector/history navigation, bank restoration, per-model ALT semantics, original MOOD regressions, state isolation, failed sends, presets/confirmation, retryable note releases, control coverage, input validation and mobile/tablet/desktop layouts.
 
-The shared engine is [app.js](app.js), pedal descriptors and model-specific behavior are in [pedals.js](pedals.js), and the original MOOD map remains in [controls.js](controls.js). [index.html](index.html) / [studio.js](studio.js) implement selection, and [controller.html](controller.html) is the common accessible controller template.
+The Chase Bliss engine is [app.js](app.js), its model-specific behavior is in [pedals.js](pedals.js), and the original MOOD map remains in [controls.js](controls.js). The multi-manufacturer engine is [instrument-app.js](instrument-app.js), with [instrument-pedals.js](instrument-pedals.js) / [instrument-synths.js](instrument-synths.js) supplying verified descriptors via [instruments.js](instruments.js). Both engines share [midi.js](midi.js), [presets.js](presets.js) and [tooltip.js](tooltip.js). [index.html](index.html) / [studio.js](studio.js) implement the two-level hub; [controller.html](controller.html) and [instrument.html](instrument.html) provide the accessible controller templates.
 
 GitHub Pages deployment runs the MIDI and browser tests and publishes all static site modules/pages plus the local font assets from the `main` branch through [the workflow](.github/workflows/pages.yml). Enable Pages with **GitHub Actions** as the source. Versioned asset URLs prevent a freshly loaded release from mixing new scripts with cached old modules; bump the asset query versions together when publishing incompatible changes.
 

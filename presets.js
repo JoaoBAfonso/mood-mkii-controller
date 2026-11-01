@@ -2,7 +2,7 @@ export const presetSlots = 122;
 export const libraryKey = (pedalId) => `midi-studio:presets:${pedalId}`;
 export const emptyLibrary = (pedalId) => ({ version: 1, pedalId, presets: {}, setlist: [] });
 
-export function validateLibrary(value, pedalId) {
+export function validateLibrary(value, pedalId, slotCount = presetSlots) {
   if (!value || typeof value !== 'object' || value.version !== 1 || value.pedalId !== pedalId) {
     throw new Error('Este ficheiro não é uma biblioteca compatível com este pedal.');
   }
@@ -12,15 +12,15 @@ export function validateLibrary(value, pedalId) {
   const library = emptyLibrary(pedalId);
   for (const [key, preset] of Object.entries(value.presets)) {
     const slot = Number(key);
-    if (!Number.isInteger(slot) || slot < 1 || slot > presetSlots || String(slot) !== key ||
+    if (!Number.isInteger(slot) || slot < 1 || slot > slotCount || String(slot) !== key ||
         !preset || typeof preset.name !== 'string' || preset.name.length > 80 ||
         typeof preset.notes !== 'string' || preset.notes.length > 1000 || typeof preset.favorite !== 'boolean') {
-      throw new Error('Biblioteca inválida: verifica os slots (1–122), nomes e notas.');
+      throw new Error(`Biblioteca inválida: verifica os slots (1–${slotCount}), nomes e notas.`);
     }
     library.presets[key] = { name: preset.name, notes: preset.notes, favorite: preset.favorite };
   }
-  if (value.setlist.length > 500 || value.setlist.some((slot) => !Number.isInteger(slot) || slot < 1 || slot > presetSlots)) {
-    throw new Error('Lista de atuação inválida: usa até 500 entradas de slots 1–122.');
+  if (value.setlist.length > 500 || value.setlist.some((slot) => !Number.isInteger(slot) || slot < 1 || slot > slotCount)) {
+    throw new Error(`Lista de atuação inválida: usa até 500 entradas de slots 1–${slotCount}.`);
   }
   library.setlist = [...value.setlist];
   return library;
@@ -28,10 +28,13 @@ export function validateLibrary(value, pedalId) {
 export const presetTitle = (library, slot) => slot === 0 ? 'Live' : library.presets[slot]?.name || `Preset ${slot}`;
 
 export function createPresetManager({ pedal, panel, quick, recall, current, targetKey, confirm, notify, onChange }) {
+  const slotCount = pedal.presets?.count ?? presetSlots;
+  const supportsLive = !pedal.presets || pedal.presets.live !== undefined;
+  const deviceName = pedal.category === 'synths' ? 'instrumento' : 'pedal';
   let library = emptyLibrary(pedal.id);
   try {
     const saved = localStorage.getItem(libraryKey(pedal.id));
-    if (saved !== null) library = validateLibrary(JSON.parse(saved), pedal.id);
+    if (saved !== null) library = validateLibrary(JSON.parse(saved), pedal.id, slotCount);
   } catch (error) { notify(`Não foi possível ler a biblioteca local: ${error.message}`); }
   let selected = 1;
   let page = 0;
@@ -40,12 +43,12 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
   panel.innerHTML = `
     <div class="preset-manager">
       <div class="preset-library-heading"><h3>A tua biblioteca</h3><div class="library-files"><button id="preset-export">Exportar</button><button id="preset-import">Importar</button><input id="preset-file" type="file" accept=".json,application/json" hidden></div></div>
-      <p class="panel-description">Dá nomes aos slots do pedal e prepara a ordem do concerto. Nomes e notas ficam neste navegador.</p>
+      <p class="panel-description">Dá nomes aos slots do ${deviceName} e prepara a ordem do concerto. Nomes e notas ficam neste navegador.</p>
       <div class="library-filters"><label>Pesquisar<input id="preset-search" type="search" placeholder="Nome, nota ou slot"></label><label class="favorite-filter"><input id="preset-only-favorites" type="checkbox"> Só favoritos</label></div>
       <div id="preset-grid" class="preset-grid" aria-label="Slots de presets"></div>
       <div class="library-pagination"><button id="preset-page-prev" aria-label="Página anterior">←</button><span id="preset-page-label" aria-live="polite"></span><button id="preset-page-next" aria-label="Página seguinte">→</button></div>
       <section class="preset-editor" aria-label="Editar preset">
-        <div class="preset-editor-heading"><label>Slot<input id="preset-slot" type="number" min="1" max="122" step="1" value="1"></label><label>Nome<input id="preset-name" maxlength="80" placeholder="Nome do som"></label><label class="preset-favorite"><input id="preset-favorite" type="checkbox"> Favorito</label></div>
+        <div class="preset-editor-heading"><label>Slot<input id="preset-slot" type="number" min="1" max="${slotCount}" step="1" value="1"></label><label>Nome<input id="preset-name" maxlength="80" placeholder="Nome do som"></label><label class="preset-favorite"><input id="preset-favorite" type="checkbox"> Favorito</label></div>
         <label>Notas de performance<textarea id="preset-notes" maxlength="1000" rows="2" placeholder="Música, parte, transição, tempo…"></textarea></label>
         <div class="preset-actions"><button id="preset-organize">Guardar nome e notas</button><button id="preset-add-setlist">Adicionar à atuação</button><button id="recall-preset" class="primary">Carregar preset</button></div>
         <div id="preset-save-control"></div>
@@ -53,12 +56,12 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
       <section class="setlist-section" aria-label="Lista de atuação"><h3>Lista de atuação</h3><p class="hint">Segue a ordem com Anterior / Seguinte. Podes repetir um preset em várias músicas.</p><ol id="preset-setlist"></ol><p id="setlist-empty">Adiciona os presets pela ordem em que vais tocar.</p></section>
       <p class="preset-local-status" id="preset-local-status" role="status" aria-live="polite"></p>
     </div>`;
-  quick.innerHTML = `<div class="current-preset"><span>PRESET</span><strong id="current-preset-name">Live</strong><small id="current-preset-position"></small></div><div class="quick-preset-actions"><button id="preset-previous" aria-label="Preset anterior">← Anterior</button><button id="preset-next" aria-label="Preset seguinte">Seguinte →</button><button id="live-preset">Live</button><button id="open-presets">Biblioteca</button></div>`;
+  quick.innerHTML = `<div class="current-preset"><span>PRESET</span><strong id="current-preset-name">Escolhe um preset</strong><small id="current-preset-position"></small></div><div class="quick-preset-actions"><button id="preset-previous" aria-label="Preset anterior">← Anterior</button><button id="preset-next" aria-label="Preset seguinte">Seguinte →</button>${supportsLive ? '<button id="live-preset">Live</button>' : ''}<button id="open-presets">Biblioteca</button></div>`;
   const metadata = () => library.presets[selected] || { name: '', notes: '', favorite: false };
   const candidate = () => structuredClone(library);
   function commit(next) {
     try {
-      const checked = validateLibrary(next, pedal.id);
+      const checked = validateLibrary(next, pedal.id, slotCount);
       localStorage.setItem(libraryKey(pedal.id), JSON.stringify(checked));
       library = checked;
       $('preset-local-status').textContent = 'Organização guardada neste navegador.';
@@ -73,7 +76,7 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
   function readSlot() {
     const input = $('preset-slot');
     if (input.value === '' || !input.validity.valid) {
-      notify('Escolhe um slot inteiro entre 1 e 122.');
+      notify(`Escolhe um slot inteiro entre 1 e ${slotCount}.`);
       return null;
     }
     return Number(input.value);
@@ -89,7 +92,7 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
   }
   function filteredSlots() {
     const query = $('preset-search').value.trim().toLocaleLowerCase('pt-PT');
-    return Array.from({ length: presetSlots }, (_, index) => index + 1).filter((slot) => {
+    return Array.from({ length: slotCount }, (_, index) => index + 1).filter((slot) => {
       const preset = library.presets[slot];
       return (!$('preset-only-favorites').checked || preset?.favorite) &&
         `${slot} ${preset?.name || ''} ${preset?.notes || ''}`.toLocaleLowerCase('pt-PT').includes(query);
@@ -117,7 +120,7 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
     $('preset-page-prev').disabled = page === 0;
     $('preset-page-next').disabled = page === pages - 1;
   }
-  const sequence = () => library.setlist.length ? library.setlist : Array.from({ length: presetSlots }, (_, index) => index + 1);
+  const sequence = () => library.setlist.length ? library.setlist : Array.from({ length: slotCount }, (_, index) => index + 1);
   function position() {
     const list = sequence();
     const signature = JSON.stringify(list);
@@ -199,7 +202,7 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
     const slot = readSlot();
     if (slot !== null && recall(slot)) { cursors.delete(targetKey()); update(); }
   };
-  $('live-preset').onclick = () => { if (recall(0)) { cursors.delete(targetKey()); update(); } };
+  if (supportsLive) $('live-preset').onclick = () => { if (recall(0)) { cursors.delete(targetKey()); update(); } };
   $('preset-previous').onclick = () => loadPosition(position() - 1);
   $('preset-next').onclick = () => loadPosition(position() + 1);
   $('preset-export').onclick = () => {
@@ -213,8 +216,8 @@ export function createPresetManager({ pedal, panel, quick, recall, current, targ
     if (!file) return;
     try {
       if (file.size > 1024 * 1024) throw new Error('O ficheiro deve ter no máximo 1 MB.');
-      const imported = validateLibrary(JSON.parse(await file.text()), pedal.id);
-      confirm('Substituir os nomes, notas, favoritos e lista de atuação locais? Os presets do pedal ficam intactos.', () => {
+      const imported = validateLibrary(JSON.parse(await file.text()), pedal.id, slotCount);
+      confirm(`Substituir os nomes, notas, favoritos e lista de atuação locais? Os presets do ${deviceName} ficam intactos.`, () => {
         if (commit(imported)) { cursors.clear(); choose(selected); update(); }
       });
     } catch (error) { notify(`Não foi possível importar: ${error.message}`); }

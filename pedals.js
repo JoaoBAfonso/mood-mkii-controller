@@ -1,4 +1,4 @@
-import { controls as moodControls, controlValueLabel as moodLabel, hiddenPedalMap, manualUrl, range, select, toggle, action, options, three } from './controls.js?v=2.1.0';
+import { controls as moodControls, controlValueLabel as moodLabel, hiddenPedalMap, manualUrl, range, select, toggle, action, options, three } from './controls.js?v=3.0.0';
 
 const save = () => ({ cc: 111, name: 'Guardar no pedal', group: 'presets', kind: 'save', confirmation: 'Guardar neste slot do pedal? O preset existente será substituído.' });
 const reset = () => action(56, 'Factory reset', 'maintenance', 1, 'ATENÇÃO: executar FACTORY RESET? Esta operação pode apagar presets e configurações.');

@@ -7,9 +7,9 @@ const open = async (page, id) => {
   await page.goto(`/controller.html?pedal=${id}`);
   await connect(page);
 };
-test('landing has four dedicated routes; selection and browser history send nothing', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByRole('navigation', { name: 'Selecionar pedal' }).getByRole('link')).toHaveCount(4);
+test('pedal section retains Chase Bliss routes; selection and browser history send nothing', async ({ page }) => {
+  await page.goto('/?section=pedals');
+  await expect(page.getByRole('navigation', { name: 'Selecionar pedal' }).getByRole('link')).toHaveCount(10);
   for (const pedal of pedals) {
     await page.getByRole('link', { name: `Controlar ${pedal.name} · ${pedal.variant}`, exact: true }).click();
     await expect(page.locator('body')).toHaveAttribute('data-pedal', pedal.id);

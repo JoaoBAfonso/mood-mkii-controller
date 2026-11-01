@@ -19,7 +19,7 @@ async function add(page, slot) {
   await page.locator('#preset-add-setlist').click();
 }
 test('hub is neutral, technical clutter is optional and both manuals are in each header', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?section=pedals');
   await expect(page.locator('body')).toHaveCSS('color', 'rgb(32, 40, 42)');
   await expect(page.locator('.brand-icon')).toHaveText('≋');
   expect(await page.locator('main').innerText()).not.toMatch(/\d+ CC|Presets · Synth/);
